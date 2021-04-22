@@ -1,0 +1,179 @@
+html {
+  /*color: #435b71;*/
+  font-size: 1em !important;
+  font-family: Source Sans Pro, Helvetica Neue, Arial, sans-serif;
+}
+
+.red {
+  background: #f33;
+}
+
+.yellow {
+  background: #ff0;
+}
+
+.green {
+  background: #0d0;
+}
+
+.grey {
+  background: #dcdcdc;
+}
+
+.blue {
+  background: dodgerblue;
+}
+
+/*Global css for header / footer, will appear on each page*/
+header,
+footer {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  padding: 4px 16px;
+  color: #222;
+  text-shadow: 1px 1px 1px rgba(50, 50, 50, 0.5);
+  z-index: 100;
+}
+header {
+  top: 0;
+  border-bottom: 1px solid #222;
+  background: rgba(240, 240, 240, 0.95);
+  box-shadow: 0 1px 16px 0 rgba(0, 0, 0, 0.5);
+}
+footer {
+  bottom: 0;
+  font-size: 1.1em;
+  border-top: 1px solid #222;
+  background: rgba(220, 220, 220, 0.8);
+  box-shadow: 0 -1px 16px 0 rgba(0, 0, 0, 0.5);
+}
+select {
+  background: lightgray;
+}
+
+/*Nav buttons in header*/
+.navBtn {
+  display: inline-block;
+  padding: 0.35em 1.2em;
+  border: thin solid #009879;
+  margin: 0 0.3em 0.3em 0;
+  border-radius: 0.12em;
+  box-sizing: border-box;
+  text-decoration: none;
+  font-family: sans-serif;
+  font-weight: 350;
+  color: black;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.navBtn:hover {
+  color: white;
+  font-weight: 500;
+  background-color: #009879;
+}
+
+@media all and (max-width: 30em) {
+  a.navBtn {
+    display: block;
+    margin: 0.4em auto;
+  }
+}
+
+.modalBg {
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modalBox {
+  position: relative;
+  border-radius: 10px;
+  padding: 16px 12px 12px;
+  background: #eee;
+  border: thin solid #fff;
+  box-shadow: 4px 4px 10px #222;
+  margin: 10% auto;
+  width: 30%;
+  height: 38%;
+  max-height: calc(100vh - 210px);
+  overflow-y: auto;
+  animation: animatetop;
+  animation-duration: 0.1s;
+}
+
+@keyframes animatetop {
+  from {
+    top: -50%;
+    opacity: 0;
+  }
+  to {
+    top: 0;
+    opacity: 1;
+  }
+}
+
+#modalForm th {
+  background: royalblue;
+}
+
+#itemsTable th {
+  background: royalblue;
+}
+
+#pendingTbl th {
+  background: lightcoral;
+}
+
+#stockHistoryTbl thead {
+  top: 0;
+  position: sticky;
+}
+
+#productOrdersTbl thead {
+  position: sticky;
+  top: 0;
+}
+
+#productOrdersTbl th {
+  background: lightcoral;
+}
+
+#stockHistoryTbl th {
+  background: dodgerblue;
+}
+
+#asinDataTbl th {
+  background: lightcoral;
+}
+
+#orderTable thead {
+  z-index: 1;
+  top: 0;
+  position: sticky;
+}
+
+#itemsTable th {
+  height: 30px;
+}
+
+#orderTable th {
+  height: 30px;
+}
+
+#itemsTable thead {
+  z-index: 1;
+  top: 0;
+  position: sticky;
+}
+
+#asinDataTbl thead {
+  z-index: 1;
+  top: 0;
+  position: sticky;
+}
