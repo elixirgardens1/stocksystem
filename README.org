@@ -16,7 +16,7 @@ The stock control is linked to @matrixCodes.db3 database located at Z:\FESP-REFA
 PHP is used for retrieving and updating data in the backend databases, all of the php used within the project is located within the /PHPAPI folder located in the root of the stocksystem folder. Below I will discuss the purpose of all the php based files the system uses.
 ***** QueryController.php
 This processes all the GET requests from the Vue frontend, the axiosGet.js file you can see below passes the a $_GET argument and the QueryController checks the argument passed and returns the relevant data.
-#+begin_src js
+#+BEGIN_SRC js
 // Located: /src/composables/axiosGet.js
 import axios from "axios";
 
@@ -29,10 +29,10 @@ export function axiosGet(type) {
 
   return dataPromise;
 }
-#+end_src
+#+END_SRC
 The QueryController need to be improved by actually building a proper API controller for the basic queries that are common across all the pages on the system, for example, product information is used on the majority of pages so should be called once using a proper API call, rather than pulling everytime.
 ***** StockPost.php
 Similar in structure to the QueryController, processes POST requests from the Vue frontend, the axiosPost.js file you can see below takes the url arguments and POSTED data and updates the backend databases.
-#+begin_src javascript
+#+BEGIN_SRC javascript
 
-#+end_src
+#+END_SRC
