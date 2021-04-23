@@ -1,42 +1,42 @@
 
 # Table of Contents
 
-1.  [Stock Control](#org504cc8b)
-    1.  [System Structure](#org6411fe3)
-        1.  [Located](#org4157799)
-        2.  [Database](#orgaf36998)
-        3.  [Dependencies](#org0f69094)
-    2.  [System Design](#orge380cab)
-        1.  [Languages](#org21acbfc)
+1.  [Stock Control](#orgd3cae11)
+    1.  [System Structure](#org4518996)
+        1.  [Located](#org65ec4d3)
+        2.  [Database](#org21e0b96)
+        3.  [Dependencies](#org7a36b46)
+    2.  [System Design](#org716d60d)
+        1.  [Languages](#orgfffa6e0)
 
 
-<a id="org504cc8b"></a>
+<a id="orgd3cae11"></a>
 
 # Stock Control
 
 The stock control system is a tool to track the products we are selling or have sold previously.
 
 
-<a id="org6411fe3"></a>
+<a id="org4518996"></a>
 
 ## System Structure
 
 
-<a id="org4157799"></a>
+<a id="org65ec4d3"></a>
 
 ### Located
 
 <https://deepthought:8080/stocksystem:8080/dist/>
 
 
-<a id="orgaf36998"></a>
+<a id="org21e0b96"></a>
 
 ### Database
 
 X:\stocksystem\PHPAPI\stock<sub>control.db3</sub>
 
 
-<a id="org0f69094"></a>
+<a id="org7a36b46"></a>
 
 ### Dependencies
 
@@ -45,12 +45,12 @@ X:\stocksystem\PHPAPI\stock<sub>control.db3</sub>
     The stock control is linked to @matrixCodes.db3 database located at Z:\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3. Stock control has the Transparency page which is used for the management of protected asins sold on amazon. New Codes are also inserted from this page and various stats about the asins are available.
 
 
-<a id="orge380cab"></a>
+<a id="org716d60d"></a>
 
 ## System Design
 
 
-<a id="org21acbfc"></a>
+<a id="orgfffa6e0"></a>
 
 ### Languages
 
