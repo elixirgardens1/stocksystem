@@ -15,7 +15,11 @@
       <tbody class="body-half-screen">
         <tr v-for="(value, index) in tableData" :key="index">
           <td v-for="(column, columnIndex) in tableColumns" :key="columnIndex">
-            <p v-if="column !== 'Product'">{{ value[column] }}</p>
+            <p v-if="column !== 'Product' && column !== 'Qty'">
+              {{ value[column] }}
+            </p>
+
+            <p v-if="column === 'Qty'">{{ value[column] }} {{ value.unit }}</p>
 
             <router-link v-if="column === 'Product'" :to="`/${value.Key}`">
               {{ value[column] }}
@@ -121,7 +125,7 @@ export default {
   text-align: center;
   display: block;
   width: 75px;
-  padding: 0.75rem;
+  padding: 0.5rem;
 }
 
 .table-scroll th {
@@ -160,5 +164,11 @@ th:hover {
 
 .small-col {
   flex-basis: 10%;
+}
+
+.table-scroll td:nth-child(20),
+.table-scroll td:nth-child(16),
+.table-scroll td:nth-child(4) {
+  border-left: thin solid black;
 }
 </style>

@@ -53,7 +53,7 @@
     </div>
   </div>
 
-  <div v-show="showSearchResults === false">
+  <div id="leftContent" v-show="showSearchResults === false">
     <div
       class="modalBg"
       id="modalSearchPredicitonBg"
@@ -126,7 +126,12 @@
       ></apexchart>
     </div>
 
-    <h3 v-show="viewType === 'orderHistory'">Orders Containing Product</h3>
+    <h3
+      style="position: absolute; left: 70%;"
+      v-show="viewType === 'orderHistory'"
+    >
+      Orders Containing Product
+    </h3>
     <div id="productOrdersDiv" v-show="viewType === 'orderHistory'">
       <DynamicTable
         id="productOrdersTbl"
@@ -135,7 +140,12 @@
       ></DynamicTable>
     </div>
 
-    <h3 v-show="viewType === 'stockHistory'">Stock History</h3>
+    <h3
+      style="position: absolute; left: 72.5%;"
+      v-show="viewType === 'stockHistory'"
+    >
+      Stock History
+    </h3>
     <div id="stockHistoryDiv" v-show="viewType === 'stockHistory'">
       <DynamicTable
         id="stockHistoryTbl"
@@ -400,6 +410,8 @@ h1 {
 }
 
 #weekSalesDiv {
+  position: absolute;
+  top: 20%;
   float: left;
   width: 47.5%;
 }

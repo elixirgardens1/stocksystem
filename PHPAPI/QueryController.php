@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die;
 }
 
-// $_GET['viewProducts'] = 'acc';
+// $_GET['productInfo?key'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -612,10 +612,13 @@ if (isset($_GET['productInfo?key'])) {
     }
     $productHistory = $tmp;
 
-    $keyStockChange = getSalesForPeriod($keyStockChange);
+    $keyStockChange = getSalesForPeriod($keyStockChange, $productInfo[0]['qty']);
+
+    $startWeek = date("Ymd", strtotime('1 week ago'));
+    $endWeek = date("Ymd", strtotime('now'));
 
     // Get the default sales periods, users will be able to select custom periods to
-    $salesPastWeek = getPeriod('1 week ago', 'now', $keyStockChange);
+    $salesPastWeek = getPeriod($startWeek, $endWeek, $keyStockChange);
     $totalSalesPastWeek = 0;
     $tmp = [];
     foreach ($salesPastWeek as $index => $dayQty) {
@@ -631,10 +634,19 @@ if (isset($_GET['productInfo?key'])) {
     $yearPredictions = [];
     $j = 0;
     for ($i = 1; $i < 13; $i++) {
-        $month = DateTime::createFromFormat('!m', $i);
-        $month = $month->format('F');
+        $startMonth = DateTime::createFromFormat('!m', $i);
+        $endMonth = DateTime::createFromFormat("!m", $i + 1);
+        $startMonth = $startMonth->format("F");
+        $endMonth = $endMonth->format("F");
 
-        $arr = getPeriod('first day of ' . $month . ' last year', 'last day of ' . $month . ' last year', $keyStockChange);
+        $startDate = date("Ymd", strtotime('first day of ' . $startMonth . ' last year'));
+        $endDate = date("Ymd", strtotime('first day of ' . $endMonth . ' last year'));
+        if ($startMonth == 'December') {
+            $endDate = date("Ymd", strtotime('first day of ' . $endMonth));
+        }
+
+        $arr = getPeriod($startDate, $endDate, $keyStockChange);
+
         // Increase by 10% margin to account for company growth
         $yearPredictions[$j] = ceil(periodTotalSales($arr) * 1.1);
         $j++;
@@ -679,7 +691,7 @@ if (isset($_GET['getSearchPeriod?start'])) {
     $numericEnd = (int)strtok('-');
 
     $startDate = date("Ymd", strtotime($startDate . '-1 year'));
-    $endDate = date("Ymd", strtotime($endDate . '-1 year'));
+    $endDate = date("Ymd", strtotime($endDate . '-1 year +1 day'));
 
     $sql = "SELECT date, qty FROM stock_change WHERE key = '$key' AND date >= $startDate AND date <= $endDate ORDER BY date DESC";
     $predictionPeriod = $db->query($sql);
@@ -695,10 +707,14 @@ if (isset($_GET['getSearchPeriod?start'])) {
     $tmp = [];
     $j = 0;
     for ($i = $numericStart; $i <= $numericEnd; $i++) {
-        $month = DateTime::createFromFormat('!m', $i);
-        $month = $month->format('F');
+        $startMonth = DateTime::createFromFormat('!m', $i);
+        $endMonth  = DateTime::createFromFormat('!m', $i + 1);
+        $startMonth = $startMonth->format("M");
+        $endMonth = $endMonth->format("M");
 
-        $arr = getPeriod('first day of ' . $month . ' last year', 'last day of ' . $month . ' last year', $periodSales);
+        $startDate  = date("Ymd", strtotime('first day of ' . $startMonth . ' last year'));
+        $endDate = date("Ymd", strtotime('first day of ' . $endMonth . ' last year'));
+        $arr = getPeriod($startDate, $endDate, $periodSales);
 
         // Increase by 10% margin to account for company growth
         $tmp[$j] = ceil(periodTotalSales($arr) * 1.1);
@@ -708,7 +724,7 @@ if (isset($_GET['getSearchPeriod?start'])) {
     $periodSales = $tmp;
 
     $start = (new DateTime($startDate))->modify('first day of this month');
-    $end = (new DateTime($endDate))->modify('last day of this month');
+    $end = (new DateTime($endDate))->modify('first day of this month');
     $interval = DateInterval::createFromDateString('1 month');
     $period = new DatePeriod($start, $interval, $end);
 
@@ -855,7 +871,7 @@ if (isset($_GET['noShelfProducts'])) {
 
 if (isset($_GET['stockPredictions'])) {
     $sql = "SELECT
-            products.cat as Cat, products.key as Key, products.product as Product,
+            products.cat as Cat, products.key as Key, products.product as Product, unit,
             stock.qty as Qty
             FROM products
             LEFT JOIN stock ON (products.key = stock.key)";
@@ -864,12 +880,19 @@ if (isset($_GET['stockPredictions'])) {
 
     $tmp = [];
     foreach ($spProducts as $index => $product) {
+        $tmp[$index] = $product;
+        $tmp[$index]['unit'] = $unitLookup[$product['unit']];
+    }
+    $spProducts = $tmp;
+
+    $tmp = [];
+    foreach ($spProducts as $index => $product) {
         $tmp[$product['Key']] = $product;
     }
     $spProducts = $tmp;
 
     $startOfLastYear = date("Ymd", strtotime('first day of january last year'));
-    $endOfLastYear = date("Ymd", strtotime('last day of december last year'));
+    $endOfLastYear = date("Ymd", strtotime('first day of january this year'));
 
     $sql = "SELECT * FROM stock_change WHERE date >= $startOfLastYear AND date <= $endOfLastYear ORDER BY date ASC";
     $spChange = $db->query($sql);
@@ -898,12 +921,20 @@ if (isset($_GET['stockPredictions'])) {
     $yearTotals = [];
     foreach ($spChange as $key => $sales) {
         for ($i = 1; $i < 13; $i++) {
-            $month = DateTime::createFromFormat('!m', $i);
-            $month = $month->format('M');
+            $startMonth = DateTime::createFromFormat('!m', $i);
+            $endMonth = DateTime::createFromFormat('!m', $i + 1);
+            $startMonth = $startMonth->format("M");
+            $endMonth = $endMonth->format("M");
 
-            $arr = getPeriod('first day of ' . $month . ' last year', 'last day of ' . $month . ' last year', $sales);
+            $startDate = date("Ymd", strtotime('first day of' . $startMonth . ' last year'));
+            $endDate  = date("Ymd", strtotime('first day of ' . $endMonth . ' last year'));
+            if ($startMonth == 'Dec') {
+                $endDate = date("Ymd", strtotime('first day of ' . $endMonth));
+            }
 
-            $yearPredictions[$key][$month] = ceil(periodTotalSales($arr) * 1.1);
+            $arr = getPeriod($startDate, $endDate, $sales);
+
+            $yearPredictions[$key][$startMonth] = ceil(periodTotalSales($arr) * 1.1);
         }
 
         $j = 1;
@@ -951,7 +982,7 @@ if (isset($_GET['skuPlatLinks?sku'])) {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-function getSalesForPeriod($arr)
+function getSalesForPeriod($arr, $currentQty = null)
 {
     // Get the sales for for each day of the period for the product
     $result = [];
@@ -960,6 +991,10 @@ function getSalesForPeriod($arr)
             $result[$date] = $qty - $previousQty;
         }
         $previousQty = $qty;
+
+        if (isset($currentQty) && reset($arr) == $qty) {
+            $result[$date] = $previousQty - $currentQty;
+        }
     }
 
     return $result;
@@ -972,8 +1007,8 @@ function getPeriod($startPeriod, $endPeriod, $arr)
 {
     $result = [];
 
-    $start = new DateTime(date("Ymd", strtotime($startPeriod)));
-    $end = new DateTime(date("Ymd", strtotime($endPeriod)));
+    $start = new DateTime($startPeriod);
+    $end = new DateTime($endPeriod);
     $interval = new DateInterval('P1D');
     $period = new DatePeriod($start, $interval, $end);
 
