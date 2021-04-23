@@ -1,6 +1,7 @@
-:PROPERTIES:
-:TOC:
-- [[#System Structure [System Structure]]
+:CONTENTS:
+- [[#installation][Installation]]
+- [[#usage][Usage]]
+- [[#changelog][Changelog]]
 :END:
 
 * Stock Control
