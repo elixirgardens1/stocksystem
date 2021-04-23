@@ -1,44 +1,83 @@
 
 # Table of Contents
 
-1.  [Stock Control](#orgd665a1a)
-    1.  [System Structure](#org90ce0ba)
-        1.  [Located](#org8fc6d3e)
-        2.  [Database](#org7abec56)
-        3.  [Dependencies](#org62c2af8)
+1.  [Stock Control](#org504cc8b)
+    1.  [System Structure](#org6411fe3)
+        1.  [Located](#org4157799)
+        2.  [Database](#orgaf36998)
+        3.  [Dependencies](#org0f69094)
+    2.  [System Design](#orge380cab)
+        1.  [Languages](#org21acbfc)
 
 
-<a id="orgd665a1a"></a>
+<a id="org504cc8b"></a>
 
 # Stock Control
 
 The stock control system is a tool to track the products we are selling or have sold previously.
 
 
-<a id="org90ce0ba"></a>
+<a id="org6411fe3"></a>
 
 ## System Structure
 
 
-<a id="org8fc6d3e"></a>
+<a id="org4157799"></a>
 
 ### Located
 
 <https://deepthought:8080/stocksystem:8080/dist/>
 
 
-<a id="org7abec56"></a>
+<a id="orgaf36998"></a>
 
 ### Database
 
 X:\stocksystem\PHPAPI\stock<sub>control.db3</sub>
 
 
-<a id="org62c2af8"></a>
+<a id="org0f69094"></a>
 
 ### Dependencies
 
 1.  Transparency
 
     The stock control is linked to @matrixCodes.db3 database located at Z:\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3. Stock control has the Transparency page which is used for the management of protected asins sold on amazon. New Codes are also inserted from this page and various stats about the asins are available.
+
+
+<a id="orge380cab"></a>
+
+## System Design
+
+
+<a id="org21acbfc"></a>
+
+### Languages
+
+1.  PHP
+
+    PHP is used for retrieving and updating data in the backend databases, all of the php used within the project is located within the /PHPAPI folder located in the root of the stocksystem folder. Below I will discuss the purpose of all the php based files the system uses.
+    
+    1.  QueryController.php
+    
+        This processes all the GET requests from the Vue frontend, the axiosGet.js file you can see below passes the a $<sub>GET</sub> argument and the QueryController checks the argument passed and returns the relevant data.
+        
+            // Located: /src/composables/axiosGet.js
+            import axios from "axios";
+            
+            export function axiosGet(type) {
+              const promise = axios.get(
+                `http://localhost/Ryan/Projects/stocksystem/PHPAPI/QueryController.php?${type}`
+              );
+            
+              const dataPromise = promise.then((response) => response.data);
+            
+              return dataPromise;
+            }
+        
+        The QueryController need to be improved by actually building a proper API controller for the basic queries that are common across all the pages on the system, for example, product information is used on the majority of pages so should be called once using a proper API call, rather than pulling everytime.
+    
+    2.  StockPost.php
+    
+        Similar in structure to the QueryController, processes POST requests from the Vue frontend, the axiosPost.js file you can see below takes the url arguments and POSTED data and updates the backend databases.
 
