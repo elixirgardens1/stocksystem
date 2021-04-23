@@ -1,0 +1,11 @@
+* Stock Control
+The stock control system is a tool to track the products we are selling or have sold previously.
+
+** System Structure
+*** Located
+https://deepthought:8080/stocksystem:8080/dist/
+*** Database
+X:\stocksystem\PHPAPI\stock_control.db3
+*** Dependencies
+**** Transparency
+The stock control is linked to @matrixCodes.db3 database located at Z:\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3. Stock control has the Transparency page which is used for the management of protected asins sold on amazon. New Codes are also inserted from this page and various stats about the asins are available.
