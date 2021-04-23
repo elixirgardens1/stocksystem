@@ -1,7 +1,7 @@
 :PROPERTIES:
-:TOC:   :include siblings :depth 0 :ignore this
+:TOC:
 - [[#System Structure [System Structure]]
-:END:]]
+:END:
 
 * Stock Control
 The stock control system is a tool to track the products we are selling or have sold previously.
