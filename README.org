@@ -1,7 +1,7 @@
+* Contents
 :CONTENTS:
-- [[#installation][Installation]]
-- [[#usage][Usage]]
-- [[#changelog][Changelog]]
+- [[#System Structure][System Structure]]
+- [[#System Design][System Design]]
 :END:
 
 * Stock Control
