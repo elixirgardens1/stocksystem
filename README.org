@@ -1,3 +1,8 @@
+:PROPERTIES:
+:TOC:   :include siblings :depth 0 :ignore this
+- [[#System Structure [System Structure]]
+:END:]]
+
 * Stock Control
 The stock control system is a tool to track the products we are selling or have sold previously.
 
@@ -17,7 +22,6 @@ PHP is used for retrieving and updating data in the backend databases, all of th
 ***** QueryController.php
 This processes all the GET requests from the Vue frontend, the axiosGet.js file you can see below passes the a $_GET argument and the QueryController checks the argument passed and returns the relevant data.
 
-```js
 #+BEGIN_SRC js
 // Located: /src/composables/axiosGet.js
 import axios from "axios";
@@ -32,7 +36,6 @@ export function axiosGet(type) {
   return dataPromise;
 }
 #+END_SRC
-```
 
 The QueryController need to be improved by actually building a proper API controller for the basic queries that are common across all the pages on the system, for example, product information is used on the majority of pages so should be called once using a proper API call, rather than pulling everytime.
 ***** StockPost.php
