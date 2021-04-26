@@ -1,6 +1,8 @@
 .DS_Store
 node_modules
 /dist
+/src/composables/axiosGet.js
+/src/composables/axiosPost.js
 
 
 # local env files
