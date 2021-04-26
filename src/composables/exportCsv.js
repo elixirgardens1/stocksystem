@@ -16,8 +16,6 @@ export const exportCsv = (exportData) => {
     headers,
     ...Object.values(exportData).map((item) => Object.values(item).join(",")),
   ].reduce((string, item) => {
-    console.log(string);
-    console.log(item);
     string += item + "\n";
     return string;
   }, "");
