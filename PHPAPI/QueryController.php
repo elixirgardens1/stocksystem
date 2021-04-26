@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die;
 }
 
-// $_GET['ddProducts'] = 'acc';
+// $_GET['viewProducts'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -98,7 +98,7 @@ if (isset($_GET['viewProducts'])) {
         $daysToOOS = "NO SALES";
         if ($monthlyTotal) {
             $daysToOOS = number_format((float)$productsArr[$key]['qty'] / (float)($monthlyTotal / count($tmp[$key])), 2, '.', '');
-            if ($daysToOOS <  0) {
+            if ($daysToOOS <  0 || $daysToOOS == 0.00) {
                 $daysToOOS = 0;
             }
         }
@@ -122,7 +122,7 @@ if (isset($_GET['viewProducts'])) {
     $stockChange = $tmp;
 
     // Sort array by days to oos value
-    asort($stockChange);
+    asort($stockChange, SORT_NATURAL);
 
     // Build main products array
     $tmp = [];
