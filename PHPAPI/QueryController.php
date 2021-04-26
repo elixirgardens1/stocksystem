@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die;
 }
 
-// $_GET['productInfo?key'] = 'acc';
+// $_GET['ddProducts'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -769,22 +769,22 @@ if (isset($_GET['cisProducts'])) {
  */
 if (isset($_GET['ddProducts'])) {
     $dateToday = time();
-    $dateToday = strtotime(date('Y-m-d', $dateToday) . 'midnight');
+    $dateToday = date('Ymd', $dateToday);
 
     // $sql = "SELECT * FROM ordered_stock WHERE status = 'Pending' AND exp_del_date = '$dateToday'";
     $sql = "SELECT ordered_stock.*,
             products.product
             FROM ordered_stock
             LEFT JOIN products ON (ordered_stock.key = products.key)
-            WHERE status = 'Pending'
+            WHERE status = 'Pending' AND exp_del_date = $dateToday
             ORDER BY ord_num";
     $ddProducts = $db->query($sql);
     $ddProducts = $ddProducts->fetchAll(PDO::FETCH_ASSOC);
 
     $tmp = [];
     foreach ($ddProducts as $index => $product) {
-        $product['exp_del_date'] = date("Y-m-d", $product['exp_del_date']);
-        $product['datetime'] = date("Y-m-d", $product['datetime']);
+        $product['exp_del_date'] = date("Y-m-d", strtotime($product['exp_del_date']));
+        $product['datetime'] = date("Y-m-d", strtotime($product['datetime']));
         $tmp[] = [
             'Key' => $product['key'],
             'Product' => $product['product'],
