@@ -15,7 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $requestBody = file_get_contents('php://input');
 $requestBody = json_decode($requestBody, true);
-if ($requestBody === null) {
+
+if ($requestBody === null && !isset($_FILES)) {
     header('HTTP/1.1 400 Bad Request');
     echo json_encode([
         'errorMessage' => 'Please provide valid JSON',
@@ -552,6 +553,11 @@ if (isset($_FILES['file'])) {
     require_once 'C:\inetpub\wwwroot\FESP-REFACTOR\FespMVC\Modules\Transparanecy\TransparencyCodes.php';
 
     $ATC = new TransparencyCodes($_POST);
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+if (isset($_FILES['responseCSV'])) {
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------

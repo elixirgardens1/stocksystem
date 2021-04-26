@@ -12,13 +12,21 @@
         value="Export Response Csv"
         @click="getResponseCsv"
       />
-      <input type="button" class="navBtn" value="Submit Response" />
+
+      <div id="responseDiv">
+        <form @submit.prevent="submitResponse($event)">
+          <input id="responseInput" type="file" name="responseCSV" />
+          <input type="submit" class="navBtn" value="Submit Response" />
+        </form>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import { axiosGet } from "@/composables/axiosGet.js";
+import { axiosPost } from "@/composables/axiosPost.js";
+import { exportCsv } from "@/composables/exportCsv.js";
 
 export default {
   name: "Admin",
@@ -26,12 +34,36 @@ export default {
   setup() {
     const getResponseCsv = () => {
       axiosGet("noShelfCsv").then((response) => {
-        console.log(response);
+        const csv = exportCsv(response);
+        if (csv === "Not Valid Format") return alert(csv);
+
+        let link = document.createElement("a");
+        link.id = "download-csv";
+        link.setAttribute(
+          "href",
+          "data:text/plain;charset=utf-8," + encodeURIComponent(csv)
+        );
+        link.setAttribute("download", "missingShelfsForm.csv");
+        document.body.appendChild(link);
+        document.querySelector("#download-csv").click();
+        document.body.removeChild(link);
+      });
+    };
+
+    const submitResponse = (event) => {
+      let responseFile = event.target[0].files[0];
+
+      let formData = new FormData();
+      formData.append("responseCSV", responseFile);
+
+      axiosPost(formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
     };
 
     return {
       getResponseCsv,
+      submitResponse,
     };
   },
 };
@@ -55,9 +87,18 @@ export default {
 }
 
 #nsProductsDiv {
-  width: 37.5%;
-  height: 15%;
+  width: 40%;
+  height: 25%;
   border: thin solid grey;
   text-align: center;
+}
+
+#responseDiv {
+  position: relative;
+  top: 25%;
+}
+
+#responseInput {
+  width: 50%;
 }
 </style>

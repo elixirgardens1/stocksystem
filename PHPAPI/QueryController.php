@@ -1006,8 +1006,8 @@ if (isset($_GET['noShelfCsv'])) {
             'qty' => $product['qty'],
             'order number' => $product['ord_num'],
             'delivery number' => $product['del_num'],
-            'delivery date' => $product['exp_del_date'],
-            'placed date' => $product['datetime'],
+            'delivery date' => date("Y-m-d", strtotime($product['exp_del_date'])),
+            'placed date' => date("Y-m-d", strtotime($product['datetime'])),
             'new shelfs' => null,
         ];
     }

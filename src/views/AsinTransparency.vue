@@ -67,7 +67,6 @@ import { axiosGet } from "@/composables/axiosGet.js";
 import { axiosPost } from "@/composables/axiosPost.js";
 import SelectList from "@/components/SelectList.vue";
 import DynamicTable from "@/components/DynamicTable.vue";
-import axios from "axios";
 
 export default {
   components: {
@@ -145,16 +144,9 @@ export default {
       formData.append("asinInput", uploadAsin);
       formData.append("type", uploadType);
 
-      axios.post(
-        "http://localhost/Ryan/Projects/stocksystem/PHPAPI/StockPost.php",
-        // "http://192.168.0.24:8080/stocksystem/PHPAPI/StockPost.php",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      axiosPost(formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       uploadAsinText.value = "";
       uploadAsinType.value = "Type";
