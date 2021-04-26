@@ -73,6 +73,9 @@
           >{{ orderNumber }}</option
         >
       </select>
+
+      Delivery Date:
+      <input id="delDateFilter" type="date" v-model="delDateInput" />
     </div>
 
     <div id="orderActionsDiv" v-show="orderNumberFilterSelected">
@@ -141,14 +144,15 @@ export default {
     const orderNumberFilterSelected = ref("");
     const supplierFilterSelected = ref("");
     const productFilter = ref("");
+    const delDateInput = ref("");
 
     const fitlerTable = computed(() => {
       if (
         !orderNumberFilterSelected.value &&
         !supplierFilterSelected.value &&
-        !productFilter.value
+        !productFilter.value &&
+        !delDateInput.value
       ) {
-        console.log("returned");
         return pendingData.value;
       }
 
@@ -173,6 +177,10 @@ export default {
             .toLowerCase()
             .indexOf(productFilter.value.toLowerCase()) == -1
         ) {
+          return false;
+        }
+
+        if (delDateInput.value && row["Delivery Date"] !== delDateInput.value) {
           return false;
         }
 
@@ -441,6 +449,7 @@ export default {
       orderNumberFilterSelected,
       supplierFilterSelected,
       productFilter,
+      delDateInput,
       orderNumberValue,
       modalProduct,
       showPendingEdit,
@@ -509,11 +518,11 @@ h4 {
   flex-direction: row;
   height: 22px;
   padding: 20px;
-  width: 50%;
+  width: 66%;
 }
 
 #filterDiv input,
 #filterDiv select {
-  margin-right: 5px;
+  margin-right: 7.5px;
 }
 </style>
