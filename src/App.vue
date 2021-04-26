@@ -32,6 +32,10 @@
       <router-link to="/transparency" tag="button">
         <input type="button" class="navBtn" value="Transparency" />
       </router-link>
+
+      <router-link to="/admin" tag="button">
+        <input type="button" class="navBtn" value="Stock Admin" />
+      </router-link>
     </header>
     <footer>
       <div style="float: right; margin-right: 50px;">
@@ -54,7 +58,7 @@ export default {
     const totalSkus = ref(0);
 
     onMounted(() => {
-      axiosGet("footerData").then(response => {
+      axiosGet("footerData").then((response) => {
         totalStockValue.value = response.totalStockValue;
         totalProducts.value = response.totalProducts;
         totalSkus.value = response.totalSkus;
@@ -64,9 +68,9 @@ export default {
     return {
       totalStockValue,
       totalProducts,
-      totalSkus
+      totalSkus,
     };
-  }
+  },
 };
 </script>
 

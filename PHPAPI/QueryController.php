@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die;
 }
 
-// $_GET['viewProducts'] = 'acc';
+// $_GET['noShelfCsv'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -860,8 +860,8 @@ if (isset($_GET['noShelfProducts'])) {
             'Product' => $product['product'],
             'Qty' => $product['qty'],
             'Order Number' => $product['ord_num'],
-            'Delivery Date' => date("Y-m-d", $product['exp_del_date']),
-            'Placed Date' => date("Y-m-d", $product['datetime']),
+            'Delivery Date' => date("Y-m-d", strtotime($product['exp_del_date'])),
+            'Placed Date' => date("Y-m-d", strtotime($product['datetime'])),
             'Supplier' => $product['supplier'],
         ];
     }
@@ -981,6 +981,39 @@ if (isset($_GET['skuPlatLinks?sku'])) {
 
 
     echo json_encode($skuPlatforms, JSON_PRETTY_PRINT);
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+if (isset($_GET['noShelfCsv'])) {
+    $sql = "SELECT ordered_stock.key, ordered_stock.qty, ordered_stock.ord_num, ordered_stock.del_num, ordered_stock.exp_del_date, ordered_stock.datetime, ordered_stock.newShelf,
+            products.product
+            FROM ordered_stock
+            LEFT JOIN products ON (ordered_stock.key = products.key)
+            WHERE ordered_stock.status = 'Complete'
+            AND ordered_stock.newShelf IS NULL
+            OR ordered_stock.newShelf = ''
+            ORDER BY ordered_stock.ord_num";
+
+    $noShelfPP = $db->query($sql);
+    $noShelfPP = $noShelfPP->fetchAll(PDO::FETCH_ASSOC);
+
+    $tmp = [];
+    foreach ($noShelfPP as $index => $product) {
+        $tmp[] = [
+            'Product' => $product['product'],
+            'key' => $product['key'],
+            'qty' => $product['qty'],
+            'order number' => $product['ord_num'],
+            'delivery number' => $product['del_num'],
+            'delivery date' => $product['exp_del_date'],
+            'placed date' => $product['datetime'],
+            'new shelfs' => null,
+        ];
+    }
+    $noShelfPP = $tmp;
+
+    echo json_encode($noShelfPP, JSON_PRETTY_PRINT);
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------

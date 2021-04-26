@@ -48,6 +48,11 @@ const routes = [
     name: "Transparency",
     component: () => import("@/views/AsinTransparency.vue"),
   },
+  {
+    path: "/admin",
+    name: "Admin",
+    component: () => import("@/views/Admin.vue"),
+  },
   /**
    * Catch all routes that are not set in the router and return the user to view stock
    */

@@ -168,6 +168,10 @@ if (isset($requestBody['editPendingProduct'])) {
     $pendingEdit = $requestBody['editPendingProduct'];
     $newShelf = json_encode($pendingEdit['newShelf']);
 
+    if ($newShelf == '[]') {
+        $newShelf = null;
+    }
+
     // Difference in price between the previous price and the new price
     $costDiff = $pendingEdit['costDiff'];
     unset($pendingEdit['costDiff']);
@@ -442,7 +446,7 @@ if (isset($requestBody['splitOrder'])) {
     $stmtOrderedStockIns->execute([
         $splitData['Key'], $splitData['splitQty'], $splitData['splitOrderNumber'], null,
         $splitData['Supplier'], 'Pending', null, date("Ymd", strtotime($splitData['Delivery Date'])), date("Ymd", strtotime($splitData['Placed Date'])),
-        $splitData['splitQty'] * $splitData['product_cost'], json_encode($splitData['newShelf'])
+        $splitData['splitQty'] * $splitData['product_cost'], null
     ]);
     $db->commit();
 }
