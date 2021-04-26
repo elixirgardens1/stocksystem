@@ -395,18 +395,37 @@ export default {
           return false;
         }
 
-        if (filterViewSelected.value) {
-          let filterValue = "";
+        // Filter view
+        let filterValue = "";
+        if (
+          filterViewSelected.value &&
+          filterViewSelected.value === "Days To OOS"
+        ) {
+          filterValue = "NO SALES";
+        }
 
-          if (filterViewSelected.value === "to_be_hidden") filterValue = "y";
-          if (filterViewSelected.value === "Days To OOS") {
-            filterValue = "NO SALES";
-          }
-          if (filterViewSelected.value === "outOfStock") filterValue = 1;
+        if (
+          filterViewSelected.value &&
+          filterViewSelected.value === "outOfStock"
+        )
+          filterValue = 1;
 
-          if (row[filterViewSelected.value] != filterValue) {
-            return false;
-          }
+        if (
+          filterViewSelected.value &&
+          filterViewSelected.value === "to_be_hidden"
+        ) {
+          filterValue = "y";
+        }
+
+        if (
+          filterViewSelected.value &&
+          row[filterViewSelected.value] != filterValue
+        ) {
+          return false;
+        }
+
+        if (!filterViewSelected.value && row["to_be_hidden"] == "y") {
+          return false;
         }
 
         return row;
