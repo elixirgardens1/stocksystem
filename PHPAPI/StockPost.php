@@ -558,11 +558,39 @@ if (isset($_FILES['file'])) {
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 if (isset($_FILES['responseCSV'])) {
-    //DEBUG 
-    echo '<pre style="background:#002; color:#fff;">';
-    print_r("TEST");
-    echo '</pre>';
-    die();
+    $csv = file_get_contents($_FILES['responseCSV']['tmp_name']);
+    $arr = array_map("str_getcsv", explode("\n", $csv));
+
+    // Get the current shelfs stored for this product
+    $sql = "SELECT key, shelf_location FROM product_rooms";
+    $currentShelfs = $db->query($sql);
+    $currentShelfs = $currentShelfs->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    $headers = $arr[0];
+    unset($arr[0]);
+
+    $tmp = [];
+    foreach ($arr as $index => $product) {
+        $tmp[] = array_combine($headers, $product);
+    }
+    $arr = $tmp;
+
+    $stmt = $db->prepare("UPDATE ordered_stock SET newShelf = ? WHERE key = ? AND ord_num = ?");
+    $stmtProductRooms = $db->prepare("UPDATE product_rooms SET shelf_location = ? WHERE key = ?");
+    $db->beginTransaction();
+    foreach ($arr as $index => $product) {
+        // Update the record in ordered_stock if a new shelf value has been input by the user
+        if ($product['new shelfs']) {
+            // Array of current shelfs
+            $keyCurrentShelfs = json_decode($currentShelfs[$product['key']]);
+            // Decode string of newshelfs into array and add missing ones to current shelfs to update table
+
+            $stmt->execute([$product['new shelfs'], $product['key'], $product['ord_num']]);
+        }
+    }
+    // $db->commit();
+
+    file_put_contents('test.php', var_export($arr, true));
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
