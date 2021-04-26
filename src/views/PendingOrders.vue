@@ -75,7 +75,12 @@
       </select>
 
       Delivery Date:
-      <input id="delDateFilter" type="date" v-model="delDateInput" />
+      <input
+        id="delDateFilter"
+        type="date"
+        v-model="delDateInput"
+        :style="[delDateInput ? 'background: yellow' : '']"
+      />
     </div>
 
     <div id="orderActionsDiv" v-show="orderNumberFilterSelected">
