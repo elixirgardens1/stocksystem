@@ -65,10 +65,10 @@ if (isset($_GET['viewProducts'])) {
     }
     $productsArr = $tmp;
 
-    $timeStampMinus7Days = date('Ymd', strtotime('1 month ago'));
+    $timeStampMinusMonth = date('Ymd', strtotime('1 month ago'));
 
     // Get weekly sales for each product / the daily rate they sell
-    $sql = "SELECT key, qty, date FROM stock_change WHERE date >= $timeStampMinus7Days ORDER BY date DESC";
+    $sql = "SELECT key, qty, date FROM stock_change WHERE date >= $timeStampMinusMonth ORDER BY date DESC";
     $stockChange = $db->query($sql);
     $stockChange = $stockChange->fetchAll(PDO::FETCH_ASSOC);
 
@@ -85,19 +85,19 @@ if (isset($_GET['viewProducts'])) {
 
     $tmp = [];
     $pastWeekSales = [];
-    foreach ($stockChange as $key => $week) {
-        $weeklyTotal = 0;
-        foreach ($week as $day => $qty) {
+    foreach ($stockChange as $key => $month) {
+        $monthlyTotal = 0;
+        foreach ($month as $day => $qty) {
             if (isset($previousQty)) {
                 $tmp[$key][$day] = $qty - $previousQty;
-                $weeklyTotal += $qty - $previousQty;
+                $monthlyTotal += $qty - $previousQty;
             }
             $previousQty = $qty;
         }
 
         $daysToOOS = "NO SALES";
-        if ($weeklyTotal) {
-            $daysToOOS = number_format((float)$productsArr[$key]['qty'] / (float)($weeklyTotal / count($tmp[$key])), 2, '.', '');
+        if ($monthlyTotal) {
+            $daysToOOS = number_format((float)$productsArr[$key]['qty'] / (float)($monthlyTotal / count($tmp[$key])), 2, '.', '');
             if ($daysToOOS <  0) {
                 $daysToOOS = 0;
             }
@@ -106,10 +106,13 @@ if (isset($_GET['viewProducts'])) {
         if (isset($tmp[$key]) && is_array($tmp[$key])) {
             $pastWeekSales[$key] = array_slice($tmp[$key], 0, 7, true);
             $weekSalesString = "";
+            $weekTotalSales = 0;
             foreach (array_reverse($pastWeekSales[$key], true) as $date => $sales) {
+                $weekTotalSales += $sales;
                 $day = date('D', strtotime($date));
                 $weekSalesString .= "$day: $sales ";
             }
+            $weekSalesString .= "Total: $weekTotalSales";
             $pastWeekSales[$key] = $weekSalesString;
         }
 
