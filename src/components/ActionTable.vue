@@ -9,7 +9,7 @@
       <tr
         v-for="(value, index) in dataArr"
         :key="index"
-        :style="[value.outOfStock ? 'background: #FF4D4D' : '']"
+        :style="[value.outOfStock ? 'background: rgba(234, 11, 11, 0.66)' : '']"
       >
         <td
           :id="column"
