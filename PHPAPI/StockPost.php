@@ -8,7 +8,6 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
 header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
 
-$requestBody['testResponseCsv'] = 'test';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header('HTTP/1.1 204 No Content');
@@ -559,10 +558,8 @@ if (isset($_FILES['file'])) {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// if (isset($_FILES['responseCSV'])) {
-if (isset($requestBody['testResponseCsv'])) {
-    // $csv = file_get_contents($_FILES['responseCSV']['tmp_name']);
-    $csv = file_get_contents('missingShelfsForm(1).csv');
+if (isset($_FILES['responseCSV'])) {
+    $csv = file_get_contents($_FILES['responseCSV']['tmp_name']);
     $arr = array_map("str_getcsv", explode("\n", $csv));
 
     // Get the current shelfs stored for this product
@@ -575,29 +572,64 @@ if (isset($requestBody['testResponseCsv'])) {
 
     $tmp = [];
     foreach ($arr as $index => $product) {
-        $tmp[] = array_combine($headers, $product);
+        if (isset($product[0])) {
+            $tmp[] = array_combine($headers, $product);
+        }
     }
     $arr = $tmp;
 
-    $stmt = $db->prepare("UPDATE ordered_stock SET newShelf = ? WHERE key = ? AND ord_num = ?");
+    $stmt = $db->prepare("UPDATE ordered_stock SET newShelf = ? WHERE ord_num = ? AND key = ?");
     $stmtProductRooms = $db->prepare("UPDATE product_rooms SET shelf_location = ? WHERE key = ?");
     $db->beginTransaction();
+
     foreach ($arr as $index => $product) {
         // Update the record in ordered_stock if a new shelf value has been input by the user
         if ($product['new shelfs']) {
             // Array of current shelfs
             $keyCurrentShelfs = json_decode($currentShelfs[$product['key']]);
-            // Decode string of newshelfs into array and add missing ones to current shelfs to update table
-            //DEBUG 
-            echo '<pre style="background:#002; color:#fff;">';
-            print_r($product['new shelfs']);
-            echo '</pre>';
-            die();
+            if (!is_array($keyCurrentShelfs)) {
+                $keyCurrentShelfs = [];
+            }
 
-            $stmt->execute([$product['new shelfs'], $product['key'], $product['ord_num']]);
+            // Decode string of newshelfs into array and add missing ones to current shelfs to update table
+            $shelfString = str_replace(' ', '', $product['new shelfs']);
+            $shelfArr = explode(',', $shelfString);
+
+            // Add new shelfs to current shelf array
+            $shelfsToAdd = array_diff($shelfArr, $keyCurrentShelfs);
+
+            // Test keys meet format A-1-2 or A-11-11 for example
+            $tmp = [];
+            $regEx = ' /^\(?([A-Z]{1})\)?[-]?([0-9]{1,2})[-]?([0-9]{1,2})$/';
+            foreach ($shelfsToAdd as $shelf) {
+                if (preg_match($regEx, $shelf)) {
+                    $keyCurrentShelfs[] = $shelf;
+                    $tmp[] = $shelf;
+                }
+            }
+            $keyCurrentShelfs = json_encode($keyCurrentShelfs);
+            $shelfArr = $tmp;
+
+            // Update the product_rooms with update shelf array
+            $stmtProductRooms->execute([$keyCurrentShelfs, $product['key']]);
+
+            // Overwrite null values with json string of newshelfs, for inserting into ordered_stock
+            $shelfArr = json_encode($shelfArr);
         }
+
+        // Default null, will remain null unless user has entered either 0 or added shelfs 
+        $shelfArr =  isset($shelfArr) ? $shelfArr : null;
+
+        // If user has put 0, insert this to table signaling that the user wants to ignore
+        if ($product['new shelfs'] === '0') {
+            $shelfArr = 0;
+        }
+
+        // Update tables with the new shelf values
+        $stmt->execute([$shelfArr, (int)$product['order number'], $product['key']]);
+        unset($shelfArr);
     }
-    // $db->commit();
+    $db->commit();
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -8,16 +8,16 @@ ini_set('memory_limit', '1024M');
  * @author: Ryan Denby
  */
 
-// header('access-control-allow-origin: *');
-// header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-// header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
+header('access-control-allow-origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
 
-// if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-//     header('HTTP/1.1 204 No Content');
-//     die;
-// }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header('HTTP/1.1 204 No Content');
+    die;
+}
 
-$_GET['productInfo?key'] = 'acc';
+// $_GET['productInfo?key'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -846,37 +846,6 @@ if (isset($_GET['protectedAsins'])) {
     ];
 
     echo json_encode($response, JSON_PRETTY_PRINT);
-}
-
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------
-
-if (isset($_GET['noShelfProducts'])) {
-    $sql = "SELECT ordered_stock.*, 
-            products.product 
-            FROM ordered_stock 
-            LEFT JOIN products ON (ordered_stock.key = products.key)
-            WHERE ordered_stock.status = 'Complete' 
-            AND ordered_stock.newShelf IS NULL 
-            OR ordered_stock.newShelf = '' 
-            GROUP BY ordered_stock.ord_num";
-    $noShelfPP = $db->query($sql);
-    $noShelfPP = $noShelfPP->fetchAll(PDO::FETCH_ASSOC);
-
-    $tmp = [];
-    foreach ($noShelfPP as $index => $product) {
-        $tmp[] = [
-            'Key' => $product['key'],
-            'Product' => $product['product'],
-            'Qty' => $product['qty'],
-            'Order Number' => $product['ord_num'],
-            'Delivery Date' => date("Y-m-d", strtotime($product['exp_del_date'])),
-            'Placed Date' => date("Y-m-d", strtotime($product['datetime'])),
-            'Supplier' => $product['supplier'],
-        ];
-    }
-    $noShelfPP = $tmp;
-
-    echo json_encode($noShelfPP, JSON_PRETTY_PRINT);
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------

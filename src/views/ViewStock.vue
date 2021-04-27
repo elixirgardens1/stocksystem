@@ -318,7 +318,7 @@ export default {
           break;
 
         case "noShelfProducts":
-          axiosGet("noShelfProducts").then((response) => {
+          axiosGet("noShelfCsv").then((response) => {
             downloadCsv(response, "noShelfProcessedProducts");
           });
           break;
