@@ -2,7 +2,7 @@
 :CONTENTS:
 - [[#System-Structure][System Structure]]
 - [[#System-Design][System Design]]
-  [[#System-Pages][System Pages]]
+- [[#System-Pages][System Pages]]
 :END:
 
 * Stock Control
