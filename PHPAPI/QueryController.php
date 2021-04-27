@@ -8,16 +8,16 @@ ini_set('memory_limit', '1024M');
  * @author: Ryan Denby
  */
 
-header('access-control-allow-origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
+// header('access-control-allow-origin: *');
+// header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+// header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header('HTTP/1.1 204 No Content');
-    die;
-}
+// if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+//     header('HTTP/1.1 204 No Content');
+//     die;
+// }
 
-// $_GET['noShelfCsv'] = 'acc';
+$_GET['productInfo?key'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -88,11 +88,14 @@ if (isset($_GET['viewProducts'])) {
     foreach ($stockChange as $key => $month) {
         $monthlyTotal = 0;
         foreach ($month as $day => $qty) {
-            if (isset($previousQty)) {
-                $tmp[$key][$day] = $qty - $previousQty;
-                $monthlyTotal += $qty - $previousQty;
+            $lastDay = array_keys($month);
+            $lastDay = end($lastDay);
+
+            if ($day != $lastDay) {
+                $previousDayQty = next($month);
+                $tmp[$key][$day] = $previousDayQty - $qty;
+                $monthlyTotal += $previousDayQty - $qty;
             }
-            $previousQty = $qty;
         }
 
         $daysToOOS = "NO SALES";
@@ -472,15 +475,7 @@ if (isset($_GET['orderHistory'])) {
         if (isset($values['date_delivered'])) {
             $date = date('Y-m-d', strtotime($values['date_delivered']));
         }
-        // $additionalInfo = [
-        //     'Order Number' => $values['ord_num'],
-        //     'Supplier' => $values['supplier'],
-        //     'Date Placed' => date('Y-m-d', $values['date_placed']),
-        //     'Date Delivered' => $date,
-        //     'Order Value' => $values['ord_value'],
-        //     'Delivery Number' => $values['delivery_number'],
-        //     'Status' => $values['status'],
-        // ];
+
         $tmp[$values['ord_num']]['Order Number'] = $values['ord_num'];
         $tmp[$values['ord_num']]['Supplier'] = $values['supplier'];
         $tmp[$values['ord_num']]['Date Placed'] = date('Y-m-d', strtotime($values['date_placed']));
@@ -556,7 +551,6 @@ if (isset($_GET['orderHistory'])) {
 
 if (isset($_GET['productInfo?key'])) {
     $key = $_GET['productInfo?key'];
-
     // Get the products information
     $sql = "SELECT products.*,
             stock.qty
@@ -590,8 +584,11 @@ if (isset($_GET['productInfo?key'])) {
     }
     $productOrders = $tmp;
 
+    $startOfLastYear = date("Ymd", strtotime('first day of january last year'));
+    $endOfLastYear = date("Ymd", strtotime('first day of january this year'));
+
     // Get the change in stock for the product for each day
-    $sql = "SELECT date, qty FROM stock_change WHERE key = '$key' ORDER BY date DESC";
+    $sql = "SELECT date, qty FROM stock_change WHERE key = '$key' AND date >= $startOfLastYear AND date <= $endOfLastYear ORDER BY date";
     $keyStockChange = $db->query($sql);
     $keyStockChange = $keyStockChange->fetchAll(PDO::FETCH_KEY_PAIR);
 
@@ -615,13 +612,25 @@ if (isset($_GET['productInfo?key'])) {
     }
     $productHistory = $tmp;
 
-    $keyStockChange = getSalesForPeriod($keyStockChange, $productInfo[0]['qty']);
+    $tmp = [];
+    foreach ($keyStockChange as $date => $qty) {
+        $lastDay = array_keys($keyStockChange);
+        $lastDay = end($lastDay);
+
+        if ($date != $lastDay) {
+            $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
+            $nextDate = $nextDate->format('Ymd');
+            $tmp[$date] = $qty - $keyStockChange[$nextDate];
+        }
+    }
+    $keyStockChange = $tmp;
 
     $startWeek = date("Ymd", strtotime('1 week ago'));
     $endWeek = date("Ymd", strtotime('now'));
 
     // Get the default sales periods, users will be able to select custom periods to
     $salesPastWeek = getPeriod($startWeek, $endWeek, $keyStockChange);
+
     $totalSalesPastWeek = 0;
     $tmp = [];
     foreach ($salesPastWeek as $index => $dayQty) {
@@ -1023,17 +1032,15 @@ function getSalesForPeriod($arr, $currentQty = null)
     // Get the sales for for each day of the period for the product
     $result = [];
     foreach ($arr as $date => $qty) {
-        if (isset($previousQty)) {
-            $result[$date] = $qty - $previousQty;
-        }
-        $previousQty = $qty;
+        $lastDay = array_keys($arr);
+        $lastDay = end($lastDay);
 
-        if (isset($currentQty) && reset($arr) == $qty) {
-            $result[$date] = $previousQty - $currentQty;
+        if ($date != $lastDay) {
+            $result[$date] = next($arr) - $qty;
         }
+
+        return $result;
     }
-
-    return $result;
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------

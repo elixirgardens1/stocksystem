@@ -8,6 +8,8 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
 header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
 
+$requestBody['testResponseCsv'] = 'test';
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header('HTTP/1.1 204 No Content');
     die;
@@ -557,8 +559,10 @@ if (isset($_FILES['file'])) {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-if (isset($_FILES['responseCSV'])) {
-    $csv = file_get_contents($_FILES['responseCSV']['tmp_name']);
+// if (isset($_FILES['responseCSV'])) {
+if (isset($requestBody['testResponseCsv'])) {
+    // $csv = file_get_contents($_FILES['responseCSV']['tmp_name']);
+    $csv = file_get_contents('missingShelfsForm(1).csv');
     $arr = array_map("str_getcsv", explode("\n", $csv));
 
     // Get the current shelfs stored for this product
@@ -584,13 +588,16 @@ if (isset($_FILES['responseCSV'])) {
             // Array of current shelfs
             $keyCurrentShelfs = json_decode($currentShelfs[$product['key']]);
             // Decode string of newshelfs into array and add missing ones to current shelfs to update table
+            //DEBUG 
+            echo '<pre style="background:#002; color:#fff;">';
+            print_r($product['new shelfs']);
+            echo '</pre>';
+            die();
 
             $stmt->execute([$product['new shelfs'], $product['key'], $product['ord_num']]);
         }
     }
     // $db->commit();
-
-    file_put_contents('test.php', var_export($arr, true));
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
