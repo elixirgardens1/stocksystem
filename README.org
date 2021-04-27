@@ -8,6 +8,52 @@
 The stock control system is a tool to track the products we are selling or have sold previously.
 
 ** System Structure
+*** System Paths
+**** The following paths in system need to be set to the relevant paths for your system, if deploying on FESP, they may need checking and uncommenting
+***** QueryController
+#+BEGIN_SRC php
+// Located: PHPAPI/QueryController.php | Line: 815
+
+$matrixDb = new PDO('sqlite:C:\inetpub\wwwroot\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3');
+#+END_SRC
+
+***** StockPost
+#+BEGIN_SRC php
+// Located: PHPAPI/StockPost.php | Line: 2
+
+// Define database
+$db = new PDO('sqlite:stock_control.db3');
+$path = 'Z:\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3';
+$matrixDB = new PDO('sqlite:' . $path);
+#+END_SRC
+
+***** axiosGet
+#+BEGIN_SRC js
+// Located: src/composables/axiosGet.js | Line: 5
+
+const promise = axios.get(
+    // URL below is for live system, change url when testing
+    // `http://localhost/Ryan/Projects/stocksystem/PHPAPI/QueryController.php?${type}`
+    `http://192.168.0.24:8080/stocksystem/PHPAPI/QueryController.php?${type}`
+  );
+#+END_SRC
+
+***** axiosPost
+#+BEGIN_SRC js
+// Located: src/composables/axiosPost.js | Line: 4
+
+try {
+    axios.post(
+      // URL below is for live system, change url when testing
+      // "http://localhost/Ryan/Projects/stocksystem/PHPAPI/StockPost.php",
+      "http://192.168.0.24:8080/stocksystem/PHPAPI/StockPost.php",
+      request,
+      config === false ? null : config
+    );
+  } catch (e) {
+    return e;
+}
+#+END_SRC
 *** Located
 https://deepthought:8080/stocksystem:8080/dist/
 *** Database
@@ -15,6 +61,7 @@ X:\stocksystem\PHPAPI\stock_control.db3
 *** Dependencies
 **** Transparency
 The stock control is linked to @matrixCodes.db3 database located at Z:\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3. Stock control has the Transparency page which is used for the management of protected asins sold on amazon. New Codes are also inserted from this page and various stats about the asins are available.
+
 
 ** System Design
 *** Languages
@@ -28,13 +75,13 @@ This processes all the GET requests from the Vue frontend, the axiosGet.js file 
 import axios from "axios";
 
 export function axiosGet(type) {
-  const promise = axios.get(
-    `http://localhost/Ryan/Projects/stocksystem/PHPAPI/QueryController.php?${type}`
-  );
+    const promise = axios.get(
+        `http://localhost/Ryan/Projects/stocksystem/PHPAPI/QueryController.php?${type}`
+    );
 
-  const dataPromise = promise.then((response) => response.data);
+    const dataPromise = promise.then((response) => response.data);
 
-  return dataPromise;
+    return dataPromise;
 }
 #+END_SRC
 
@@ -42,6 +89,22 @@ The QueryController need to be improved by actually building a proper API contro
 ***** StockPost.php
 Similar in structure to the QueryController, processes POST requests from the Vue frontend, the axiosPost.js file you can see below takes the url arguments and POSTED data and updates the backend databases.
 
-#+BEGIN_SRC javascript
+#+BEGIN_SRC js
+import axios from "axios";
 
+export function axiosPost(request, config = false) {
+  try {
+    axios.post(
+      // URL below is for live system, change url when testing
+      "http://localhost/Ryan/Projects/stocksystem/PHPAPI/StockPost.php",
+      // "http://192.168.0.24:8080/stocksystem/PHPAPI/StockPost.php",
+      request,
+      config === false ? null : config
+    );
+  } catch (e) {
+    return e;
+  }
+
+  return true;
+}
 #+END_SRC
