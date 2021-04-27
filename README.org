@@ -1,7 +1,7 @@
 * Contents
 :CONTENTS:
-- [[#System Structure][System Structure]]
-- [[#System Design][System Design]]
+- [[#System-Structure][System Structure]]
+- [[#System-Design][System Design]]
 :END:
 
 * Stock Control
