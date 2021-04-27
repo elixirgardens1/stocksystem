@@ -54,18 +54,24 @@ try {
     return e;
 }
 #+END_SRC
-*** Located
+*** Located On FESP
 https://deepthought:8080/stocksystem:8080/dist/
 *** Database
+**** Server Path
 X:\stocksystem\PHPAPI\stock_control.db3
+**** Physical Path
+C:\xampp\htdocs\stocksystem\PHPAPI\stock_control.db3
 *** Dependencies
 **** Transparency
-The stock control is linked to @matrixCodes.db3 database located at Z:\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3. Stock control has the Transparency page which is used for the management of protected asins sold on amazon. New Codes are also inserted from this page and various stats about the asins are available.
+***** MatrixCodes
+located at Z:\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3
+
+The stock control is linked to @matrixCodes.db3 database. Stock control has the Transparency page which is used for the management of protected asins sold on amazon. New Codes are also inserted from this page and various stats about the asins are available.
 
 
 ** System Design
 *** Languages
-**** PHP
+**** Php
 PHP is used for retrieving and updating data in the backend databases, all of the php used within the project is located within the /PHPAPI folder located in the root of the stocksystem folder. Below I will discuss the purpose of all the php based files the system uses.
 ***** QueryController.php
 This processes all the GET requests from the Vue frontend, the axiosGet.js file you can see below passes the a $_GET argument and the QueryController checks the argument passed and returns the relevant data.
@@ -108,3 +114,10 @@ export function axiosPost(request, config = false) {
   return true;
 }
 #+END_SRC
+
+**** Vue
+Vue is a frontend javascirpt framework, the entire frontend of the stock system uses the Vue framework, if you are unfamiliar with the framework, it is relatively easy to pick up and has great documentation [[https://v3.vuejs.org/guide/introduction.html]]. I will breifly discuss the structure of the system, for more information visit the documentaiton. Vue consists of one true html page, index.html located in public/html.index, all pages are dynamically rendered into that singular index.html file, the various pages for the system are located in the src/views folder. The home page, src/views/ViewStock.vue, is the default page that loads when the user opens the stock system, if the users navigates to another page using the nav bar, the Vue-Router lazy loads required src/view page and renders it into the index.html file.
+
+#+CAPTION: View Pages Folder - Contains all the pages for the system
+#+NAME: ViewPages
+[[file:ViewPages.jpg]]
