@@ -81,6 +81,12 @@
         v-model="delDateInput"
         :style="[delDateInput ? 'background: yellow' : '']"
       />
+      <input
+        type="button"
+        class="navBtn"
+        value="Clear"
+        @click="delDateInput = ''"
+      />
     </div>
 
     <div id="orderActionsDiv" v-show="orderNumberFilterSelected">
@@ -523,11 +529,12 @@ h4 {
   flex-direction: row;
   height: 22px;
   padding: 20px;
-  width: 66%;
+  width: 80%;
 }
 
 #filterDiv input,
 #filterDiv select {
+  max-width: 140px;
   margin-right: 7.5px;
 }
 </style>

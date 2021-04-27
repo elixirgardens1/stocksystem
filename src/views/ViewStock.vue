@@ -818,7 +818,12 @@ h3 {
   position: relative;
   width: 40%;
   display: flex;
-  justify-content: space-between;
+}
+
+#tableFilters select,
+#tableFilters input {
+  max-width: 100px;
+  margin-right: 5px;
 }
 
 #viewProductsTbl {
