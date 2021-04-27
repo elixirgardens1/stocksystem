@@ -2,6 +2,7 @@
 :CONTENTS:
 - [[#System-Structure][System Structure]]
 - [[#System-Design][System Design]]
+  [[#System-Pages][System Pages]]
 :END:
 
 * Stock Control
@@ -121,3 +122,7 @@ Vue is a frontend javascirpt framework, the entire frontend of the stock system 
 #+CAPTION: View Pages Folder - Contains all the pages for the system
 #+NAME: ViewPages
 [[file:ViewPages.jpg]]
+** System Pages
+I will quickly describe each of the stocks systems pages, the intened usage and functionality of the page and note some design choices / issues within them
+**** View Stock
+View Stock page presents the user with all the products currently in FESP, it lists various information about each product, product name, supplier, rooms it is stored in the warehouse currently etc, which is also editable from this page. The page also acts as an ordering system, where the user can select products from the products table and add an order qty to an order form, the order from will only allow products from one supplier at a time, all products in the form are editable / deletable etc. When the user has made the order, they can submit the order by opening the form, checking the values they have input and submitting the form. Once a form is submitted it will create an order email template for the user to send to the supplier, and add the items to the @stock_control@ordered_stock table, the table will store the qty for each product the delivery date, placed date, the cost of the individual items etc. The @stock_control@ordered_stock table holds these orders until they are processed, at which point the qtys for each of the products will be added to the current stock for each of the products, all this functionality is handeled in the Pending Orders page which will be discussed in the Pending Orders section.
