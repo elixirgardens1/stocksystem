@@ -1,7 +1,17 @@
 <?php
 
-// Set connection to db
+// Set connection to dbs
 $db = new PDO ('sqlite:stock_control.db3');
+$apiOrders = new PDO ('sqlite:api_orders.db3');
+// $cacheDb = new PDO ('sqlite:cache.db3');
+
+
+// Get orders from api_orders.db3 which will be used to minus the qtys from the current products qtys
+$sql = "SELECT * FROM orders LIMIT 1";
+$test = $cacheDb->query($sql);
+$test = $test->fetchAll(PDO::FETCH_ASSOC);
+
+
 
 // Get all the skus currently out of stocked on the platforms from the
 $sql = "SELECT key,qty FROM stock";
