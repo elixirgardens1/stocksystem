@@ -101,26 +101,50 @@ foreach($orderStk as $value) {
             $att['value'] = $att['value'][0] * $att['value'][1];
         }
 
-        // Multiply the order qty for this sku by the key att qty, decrease the keyStock by this qty
-        $qty = $att['value'] * $value['qty'];
-        $keyStock[$att['key']] = $keyStock[$att['key']] - $qty;
+        if (isset($keyStock[$att['key']])) {
+            // Multiply the order qty for this sku by the key att qty, decrease the keyStock by this qty
+            $qty = $att['value'] * $value['qty'];
+            $keyStock[$att['key']] = $keyStock[$att['key']] - $qty;
 
-        // If not already set, set values for totalAmount sold and how many orders
-        if (!isset($keyQtySold[$att['key']])) {
-            $keyQtySold[$att['key']]['totalAmount'] = 0;
-            $keyQtySold[$att['key']]['totalOrders'] = 0;
+            // If not already set, set values for totalAmount sold and how many orders
+            if (!isset($keyQtySold[$att['key']])) {
+                $keyQtySold[$att['key']]['totalAmount'] = 0;
+                $keyQtySold[$att['key']]['totalOrders'] = 0;
+            }
+
+            // Increment by qty of key sold, and increment by 1 amount of orders
+            $keyQtySold[$att['key']]['totalAmount'] = $keyQtySold[$att['key']]['totalAmount'] + $qty;
+            $keyQtySold[$att['key']]['totalOrders']++;
+
+            $stmt->execute([$keyStock[$att['key']], $att['key']]);
         }
-
-        // Increment by qty of key sold, and increment by 1 amount of orders
-        $keyQtySold[$att['key']]['totalAmount'] = $keyQtySold[$att['key']]['totalAmount'] + $qty;
-        $keyQtySold[$att['key']]['totalOrders']++;
-
-        $stmt->execute([$keyStock[$att['key']], $att['key']]);
     }
 }
 // SUBMIT VALUES TO DATABASE, UNCOMMENT
 // $db->commit();
 //
+
+// Get all out of stock products
+$sql = "SELECT key FROM products WHERE outOfStock = 1";
+$outOfStockProducts = $db->query($sql);
+$outOfStockProducts = array_flip($outOfStockProducts->fetchAll(PDO::FETCH_COLUMN));
+
+// Prepare insert into stock_change
+$stmt = $db->prepare("INSERT INTO stock_change VALUES (?,?,?,?)");
+$date = date("Ymd");
+$db->beginTransaction();
+foreach($keyStock as $product) {
+    $setOos = null;
+
+    if (isset($outOfStockProducts[$product['key']])) {
+        $setOos = 1;
+    }
+
+    $stmt->execute([$product['key'], $product['qty'], $date, $setOos]);
+}
+// UNCOMMENT
+// $db->commit();
+
 
 
 /// DEBUG
