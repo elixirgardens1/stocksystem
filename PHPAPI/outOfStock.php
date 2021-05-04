@@ -1,15 +1,58 @@
 <?php
 
 // Set connection to dbs
-$db = new PDO ('sqlite:stock_control.db3');
-$apiOrders = new PDO ('sqlite:api_orders.db3');
-// $cacheDb = new PDO ('sqlite:cache.db3');
+$db = new PDO('sqlite:stock_control.db3');
+// $apiDb = new PDO('sqlite:api_orders.db3');
+$barcodeDb = new PDO('sqlite:orders.db3');
+$cacheDb = new PDO('sqlite:cache.db3');
 
 
-// Get orders from api_orders.db3 which will be used to minus the qtys from the current products qtys
 $sql = "SELECT * FROM orders LIMIT 1";
-$test = $cacheDb->query($sql);
+$test = $barcodeDb->query($sql);
 $test = $test->fetchAll(PDO::FETCH_ASSOC);
+
+// Timestamp starting at 00:00 5 days ago
+$dateMinus5Days = strtotime(date("Y-m-d", strtotime('- 5 days')));
+
+// Get orders from the barcode database which have the status marked in the past 5 days
+$sql = "SELECT orderID FROM orders WHERE status = 'MARKED' AND statusTime >= $dateMinus5Days";
+$marked5DaysOrders = $barcodeDb->query($sql);
+$marked5DaysOrders = array_flip($marked5DaysOrders->fetchAll(PDO::FETCH_COLUMN));
+
+// Get orders from cache from past 5 days
+$sql = "SELECT * FROM orders WHERE dateRetrieved >= $dateMinus5Days";
+$orders5Days = $cacheDb->query($sql);
+$orders5Days = $orders5Days->fetchAll(PDO::FETCH_ASSOC);
+
+// Format array and remove any orders that are not in the marked in past 5 days array
+$tmp = [];
+foreach ($orders5Days as $index => $order) {
+    if (isset($marked5DaysOrders[$order['orderID']])) {
+        $tmp[$order['orderID']] = json_decode($order['content'], true);
+    }
+}
+$orders5Days = $tmp;
+
+// Get all skus and their key attributes
+$sql = "SELECT sku, atts FROM sku_atts";
+$skuKeyAtts = $db->query($sql);
+$skuKeyAtts  = $skuKeyAtts->fetchAll(PDO::FETCH_KEY_PAIR);
+
+$tmp = [];
+foreach($skuKeyAtts as $sku => $atts) {
+    $attsArr = explode(',', $atts);
+
+    foreach($attsArr as $index => $att) {
+        $key = strtok($att, '|');
+        $qty = strtok('|');
+
+        $tmp[$sku][] = [
+            'key' => $key,
+            'value' => $qty,
+        ];
+    }
+}
+$skuKeyAtts = $tmp;
 
 
 
@@ -58,7 +101,6 @@ foreach ($keyStockChange as $key => $month) {
         if ($daysToOOS < 3) {
             $tmp[$key] = $daysToOOS;
         }
-
     }
 }
 $keyStockChange = $tmp;
@@ -93,6 +135,9 @@ foreach ($keySkus as $index => $sku) {
 $keySkus = $tmp;
 
 /// DEBUG
-echo '<pre style="background: black;  color: white;">'; print_r(count($keySkus)); echo '</pre>'; die();
+echo '<pre style="background: black;  color: white;">';
+print_r(count($keySkus));
+echo '</pre>';
+die();
 
 //  the products that need out of stocking, pass the array to the controller for the platforms
