@@ -54,6 +54,77 @@ foreach($skuKeyAtts as $sku => $atts) {
 }
 $skuKeyAtts = $tmp;
 
+// Get current stock level for each key
+$sql = "SELECT key, qty FROM stock";
+$keyStock = $db->query($sql);
+$keyStock = $keyStock->fetchAll(PDO::FETCH_KEY_PAIR);
+
+// Get list of orderid / skus that have already been processed into the system
+$sql = "SELECT * FROM sku_stock";
+$trackedOrderSkus = $db->query($sql);
+$trackedOrderSkus = $trackedOrderSkus->fetchAll(PDO::FETCH_KEY_PAIR);
+
+$orderStk = [];
+$skusNotInStk = [];
+foreach($orders5Days as $orderId => $order) {
+    foreach($order['items'] as $item) {
+        if (!isset($trackedOrderSkus[$orderId . $item['SKU']])) {
+            if (isset($skuKeyAtts[$item['SKU']])) {
+                // OrderID sku combinations that are not in the stock records
+                $orderStk[] = [
+                    'orderID' => $orderId,
+                    'sku' => $item['SKU'],
+                    'qty' => $item['quantity'],
+                    'atts' => $skuKeyAtts[$item['SKU']],
+                ];
+            } elseif ($item['SKU']) {
+                // Skus not in stock control
+                $skusNotInStk[$item['SKU']] = $item['SKU'];
+            }
+        }
+    }
+}
+
+// Get the qtys sold for reach of the keys
+$keyQtySold = [];
+
+// Update the stock table wit the new current stock level
+$stmt = $db->prepare("UPDATE stock SET qty = ? WHERE key = ?");
+$db->beginTransaction();
+
+foreach($orderStk as $value) {
+    foreach ($value['atts'] as $att) {
+        // If key qty value is qty x multiple
+        if (stripos($att['value'], 'x') !== false) {
+            // Explode the qty and multiplier and multiply them to get the actualy qty value
+            $att['value'] = explode('x', $att['value']);
+            $att['value'] = $att['value'][0] * $att['value'][1];
+        }
+
+        // Multiply the order qty for this sku by the key att qty, decrease the keyStock by this qty
+        $qty = $att['value'] * $value['qty'];
+        $keyStock[$att['key']] = $keyStock[$att['key']] - $qty;
+
+        // If not already set, set values for totalAmount sold and how many orders
+        if (!isset($keyQtySold[$att['key']])) {
+            $keyQtySold[$att['key']]['totalAmount'] = 0;
+            $keyQtySold[$att['key']]['totalOrders'] = 0;
+        }
+
+        // Increment by qty of key sold, and increment by 1 amount of orders
+        $keyQtySold[$att['key']]['totalAmount'] = $keyQtySold[$att['key']]['totalAmount'] + $qty;
+        $keyQtySold[$att['key']]['totalOrders']++;
+
+        $stmt->execute([$keyStock[$att['key']], $att['key']]);
+    }
+}
+// SUBMIT VALUES TO DATABASE, UNCOMMENT
+// $db->commit();
+//
+
+
+/// DEBUG
+echo '<pre style="background: black;  color: white;">'; print_r($keyQtySold); echo '</pre>'; die();
 
 
 // Get all the skus currently out of stocked on the platforms from the
