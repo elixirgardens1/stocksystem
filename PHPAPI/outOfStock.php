@@ -1,18 +1,43 @@
 <?php
+/*
+ * File: outOfStock.php
+ * @Author: Ryan Denby
+ * Date: 29/04/2021
+*/
+
+/*
+ * Update the current stock qty for products by getting orders from the cache database from the
+ * past 5 days that have the status MARKED in the barcode database. These orders will have a list
+ * of skus which we will use to get the keys that build, multiply the order qty by the key qty
+ * that is required for that sku which will be minused form current stock qty for that key.
+ * Update the stock qtys for all keys and update the stock change using this new value, record
+ * any missing skus in the missing_skus table and record the processed orders in the sku_stock
+ * table.
+
+ * After the first part of the script has updated the stock qty values, the script will calculate
+ * how many days each key has until it will be out of stock, this is based on the total sales over
+ * the past month used to find the average daily sales and dividing the current stock qty by this
+ * daily rate. Any keys found to have less than 3 days till they are out of stock need to be out
+ * of stocked on the platforms, all skus this affects will be collected and requests will be fired
+ * to each of the platforms to out of stock this product.
+
+ * Lastly the script will check for any products that are currently out of stock on the platforms,
+ * that have greater than 3 days till out of stock value, these can be restocked on the platforms,
+ * again collect a list of affected skus and fire requests to the platforms to restock the skus.
+*/
 
 // Set connection to dbs
 $db = new PDO('sqlite:stock_control.db3');
-// $apiDb = new PDO('sqlite:api_orders.db3');
 $barcodeDb = new PDO('sqlite:orders.db3');
 $cacheDb = new PDO('sqlite:cache.db3');
 
-
-$sql = "SELECT * FROM orders LIMIT 1";
-$test = $barcodeDb->query($sql);
-$test = $test->fetchAll(PDO::FETCH_ASSOC);
-
 // Timestamp starting at 00:00 5 days ago
 $dateMinus5Days = strtotime(date("Y-m-d", strtotime('- 5 days')));
+$dateMinus30Days = strtotime(date("Ymd"), strtotime('- 30 days'));
+
+// Delete records from sku_stock older than 30 days
+$sql = "DELETE FROM sku_stock WHERE date < $dateMinus30Days";
+$db->query($sql);
 
 // Get orders from the barcode database which have the status marked in the past 5 days
 $sql = "SELECT orderID FROM orders WHERE status = 'MARKED' AND statusTime >= $dateMinus5Days";
@@ -92,10 +117,8 @@ foreach($orders5Days as $orderId => $order) {
     }
 }
 
-// Get the qtys sold for reach of the keys
+// Get the qtys sold for reach of the keys and update the stock qtys for each product
 $keyQtySold = [];
-
-// Update the stock table wit the new current stock level
 $stmt = $db->prepare("UPDATE stock SET qty = ? WHERE key = ?");
 $db->beginTransaction();
 
@@ -138,18 +161,17 @@ $outOfStockProducts = array_flip($outOfStockProducts->fetchAll(PDO::FETCH_COLUMN
 $stmt = $db->prepare("INSERT INTO stock_change VALUES (?,?,?,?)");
 $date = date("Ymd");
 $db->beginTransaction();
-foreach($keyStock as $product) {
+foreach($keyStock as $key => $qty) {
     $setOos = null;
 
-    if (isset($outOfStockProducts[$product['key']])) {
+    if (isset($outOfStockProducts[$key])) {
         $setOos = 1;
     }
 
-    $stmt->execute([$product['key'], $product['qty'], $date, $setOos]);
+    $stmt->execute([$key, $qty, $date, $setOos]);
 }
 
 $db->commit();
-
 
 // Insert processed orderids into sku_stock, in format {orderid}{sku} as unique identifier for orderid
 $stmt = $db->prepare("INSERT INTO sku_stock VALUES (?,?)");
@@ -161,15 +183,19 @@ $db->commit();
 
 //Insert missing skus
 ksort($skusNotInStk, SORT_NATURAL);
-$stmt = $db->prepare("INSERT INTO missing_skus VALUES (?,?)");
+$stmt = $db->prepare("INSERT OR REPLACE INTO missing_skus VALUES (?,?)");
 $db->beginTransaction();
 foreach ($skusNotInStk as $sku) {
     $stmt->execute([$sku, date("Ymd")]);
 }
 $db->commit();
 
-/// DEBUG
-echo '<pre style="background: black;  color: white;">'; print_r($productUnits); echo '</pre>'; die();
+// Test update stock_control before doing out of stocking
+die();
+
+/*
+ * Now calculate the days to out of stock for keys and out of stock the affected skus on the platforms
+*/
 
 
 // Get all the skus currently out of stocked on the platforms from the
