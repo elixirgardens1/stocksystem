@@ -64,6 +64,13 @@ $sql = "SELECT * FROM sku_stock";
 $trackedOrderSkus = $db->query($sql);
 $trackedOrderSkus = $trackedOrderSkus->fetchAll(PDO::FETCH_KEY_PAIR);
 
+/**
+ * Build two arrays, first will contain a list of orders that need to be processed into the stock
+ * system and will be used to decrease the current qty of stock in the stock table.
+ *
+ * The second array will contain skus that are not currently in the system and will be inserted
+ * into the missing_skus table.
+*/
 $orderStk = [];
 $skusNotInStk = [];
 foreach($orders5Days as $orderId => $order) {
@@ -120,9 +127,7 @@ foreach($orderStk as $value) {
         }
     }
 }
-// SUBMIT VALUES TO DATABASE, UNCOMMENT
-// $db->commit();
-//
+$db->commit();
 
 // Get all out of stock products
 $sql = "SELECT key FROM products WHERE outOfStock = 1";
@@ -142,13 +147,29 @@ foreach($keyStock as $product) {
 
     $stmt->execute([$product['key'], $product['qty'], $date, $setOos]);
 }
-// UNCOMMENT
-// $db->commit();
+
+$db->commit();
 
 
+// Insert processed orderids into sku_stock, in format {orderid}{sku} as unique identifier for orderid
+$stmt = $db->prepare("INSERT INTO sku_stock VALUES (?,?)");
+$db->beginTransaction();
+foreach ($orderStk as $order) {
+    $stmt->execute([$order['orderID'] . $order['sku'], date("Ymd")]);
+}
+$db->commit();
+
+//Insert missing skus
+ksort($skusNotInStk, SORT_NATURAL);
+$stmt = $db->prepare("INSERT INTO missing_skus VALUES (?,?)");
+$db->beginTransaction();
+foreach ($skusNotInStk as $sku) {
+    $stmt->execute([$sku, date("Ymd")]);
+}
+$db->commit();
 
 /// DEBUG
-echo '<pre style="background: black;  color: white;">'; print_r($keyQtySold); echo '</pre>'; die();
+echo '<pre style="background: black;  color: white;">'; print_r($productUnits); echo '</pre>'; die();
 
 
 // Get all the skus currently out of stocked on the platforms from the
