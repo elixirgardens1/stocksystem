@@ -551,6 +551,7 @@ if (isset($_GET['orderHistory'])) {
 
 if (isset($_GET['productInfo?key'])) {
     $key = $_GET['productInfo?key'];
+
     // Get the products information
     $sql = "SELECT products.*,
             stock.qty
@@ -625,11 +626,27 @@ if (isset($_GET['productInfo?key'])) {
     }
     $keyStockChange = $tmp;
 
-    $startWeek = date("Ymd", strtotime('1 week ago'));
+    $startWeek = date("Ymd", strtotime('- 8 days'));
     $endWeek = date("Ymd", strtotime('now'));
 
-    // Get the default sales periods, users will be able to select custom periods to
-    $salesPastWeek = getPeriod($startWeek, $endWeek, $keyStockChange);
+    //Get the change in stock for the product for past week
+    $sql = "SELECT date, qty FROM stock_change WHERE key = '$key' AND date >= $startWeek AND date <= $endWeek ORDER BY date";
+    $salesPastWeek = $db->query($sql);
+    $salesPastWeek = $salesPastWeek->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // Get sales by day
+    $tmp = [];
+    foreach ($salesPastWeek as $date => $qty) {
+        $lastDay = array_keys($salesPastWeek);
+        $lastDay = end($lastDay);
+
+        if ($date != $lastDay) {
+            $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
+            $nextDate = $nextDate->format('Ymd');
+            $tmp[$date +  1] = $qty - $salesPastWeek[$nextDate];
+        }
+    }
+    $salesPastWeek = $tmp;
 
     $totalSalesPastWeek = 0;
     $tmp = [];
@@ -1026,7 +1043,7 @@ function getPeriod($startPeriod, $endPeriod, $arr)
 
     foreach ($period as $dt) {
         if (isset($arr[$dt->format("Ymd")])) {
-            $result[$dt->format("Ymd")] = number_format($arr[$dt->format("Ymd")], 2);
+            $result[$dt->format("Ymd")] = number_format($arr[$dt->format("Ymd")], 2, '.', '');
         }
     }
 
