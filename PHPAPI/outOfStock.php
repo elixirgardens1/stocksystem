@@ -39,6 +39,14 @@ $dateMinus30Days = strtotime(date("Ymd"), strtotime('- 30 days'));
 $sql = "DELETE FROM sku_stock WHERE date < $dateMinus30Days";
 $db->query($sql);
 
+// Delete skus from missing_skus if they exist in sku_atts
+$sql = "DELETE FROM missing_skus WHERE sku IN (SELECT sku FROM sku_atts)";
+$db->query($sql);
+
+// Delete from sku_atts_new if in sku_atts
+$sql = "DELETE FROM sku_atts_new WHERE sku IN (SELECT sku FROM sku_atts)";
+$db->query($sql);
+
 // Get orders from the barcode database which have the status marked in the past 5 days
 $sql = "SELECT orderID FROM orders WHERE status = 'MARKED' AND statusTime >= $dateMinus5Days";
 $marked5DaysOrders = $barcodeDb->query($sql);
@@ -117,7 +125,7 @@ foreach($orders5Days as $orderId => $order) {
     }
 }
 
-// Get the qtys sold for reach of the keys and update the stock qtys for each product
+// Get the qtys sold for each of the keys and update the stock qtys for each product
 $keyQtySold = [];
 $stmt = $db->prepare("UPDATE stock SET qty = ? WHERE key = ?");
 $db->beginTransaction();
@@ -191,6 +199,9 @@ foreach ($skusNotInStk as $sku) {
 $db->commit();
 
 // Test update stock_control before doing out of stocking
+
+/// DEBUG
+echo '<pre style="background: black;  color: white;">'; print_r($orderStk); echo '</pre>'; die();
 die();
 
 /*
