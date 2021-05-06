@@ -826,35 +826,50 @@ h3 {
   margin-right: 5px;
 }
 
-#viewProductsTbl {
-  display: block;
+#viewProductsTbl thead {
+  position: sticky;
+  top: 40px;
+  z-index: 1;
 }
 
-#viewProductsTbl thead {
+#viewProductsTbl th {
+  height: 50px;
+}
+
+#viewProductsTbl td {
+  width: 75px;
+}
+
+/* #viewProductsTbl {
+  display: block;
+} */
+
+/* #viewProductsTbl thead {
   position: relative;
   display: block;
   width: 99%;
-}
+} */
 
-#viewProductsTbl tbody {
+/* #viewProductsTbl tbody {
   position: relative;
   display: block;
   width: 100%;
   overflow-y: scroll;
   height: 77vh;
-}
+} */
 
-#viewProductsTbl td,
+/* #viewProductsTbl td,
 #viewProductsTbl th {
   flex-basis: 100%;
   display: block;
   text-align: center;
   vertical-align: middle;
   height: 100px;
-}
+} */
 
+/* 
 #viewProductsTbl tr {
   display: flex;
   width: 100%;
-}
+} */
 </style>
