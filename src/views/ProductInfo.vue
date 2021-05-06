@@ -16,25 +16,7 @@
       type="button"
       class="navBtn"
       value="Show Main View"
-      @click="showSearchResults = false"
-    />
-    <input
-      id="searchBtn"
-      type="button"
-      class="navBtn"
-      value="Search Prediction Period"
-      @click="
-        showModalSearch = true;
-        showSearchResults = false;
-      "
-    />
-
-    <input
-      id="viewResults"
-      type="button"
-      class="navBtn"
-      value="View Search Results"
-      @click="showSearchResults = true"
+      @click="true"
     />
 
     <div id="viewLinksDiv">
@@ -53,40 +35,7 @@
     </div>
   </div>
 
-  <div id="leftContent" v-show="showSearchResults === false">
-    <div
-      class="modalBg"
-      id="modalSearchPredicitonBg"
-      v-show="showModalSearch === true"
-    >
-      <div class="modalBox" id="modalSearchPredictionBox">
-        <h3>Enter Search Period</h3>
-
-        <div id="modalSearchInput">
-          <label for="modalStartDate">Start Period </label>
-          <input ref="startDate" id="modalStartDate" type="date" />
-
-          <label for="modalEndDate">End Period </label>
-          <input ref="endDate" id="modalEndDate" type="date" />
-        </div>
-
-        <div id="modalSearchPredictionBtns">
-          <input
-            class="navBtn"
-            type="button"
-            value="Search"
-            @click="getSearchPeriod"
-          />
-          <input
-            class="navBtn"
-            type="button"
-            value="Cancel"
-            @click="showModalSearch = false"
-          />
-        </div>
-      </div>
-    </div>
-
+  <div id="leftContent">
     <div id="weekSalesDiv">
       <h3 id="weekTitle">
         Last Week Sales <span style="color:red;">|</span>Total:
@@ -154,33 +103,6 @@
       ></DynamicTable>
     </div>
   </div>
-
-  <div id="searchResultsDiv" v-show="showSearchResults === true">
-    <div
-      id="noResultsDiv"
-      v-if="Object.keys(predictionSearches.results).length === 0"
-    >
-      <h2>No Search Results, Search To See Query Results Here</h2>
-    </div>
-    <div
-      id="searchGraphDiv"
-      v-for="(period, index) in predictionSearches.results"
-      :key="index"
-    >
-      <div>
-        <h3>
-          {{ index }} <span style="color: red;">|</span> Total Sales:
-          {{ period.totalSales }}
-        </h3>
-        <apexchart
-          width="800"
-          type="line"
-          :options="period.chartOptions"
-          :series="period.series"
-        ></apexchart>
-      </div>
-    </div>
-  </div>
 </template>
 
 <script>
@@ -221,55 +143,8 @@ export default {
     const productOrderColumns = ref([]);
     const productHistoryColumns = ref([]);
 
-    const startDate = ref("");
-    const endDate = ref("");
-    const showModalSearch = ref(false);
-
-    const showSearchResults = ref(false);
-    const predictionSearches = reactive({ results: {} });
-
     const setView = (type) => {
       viewType.value = type;
-    };
-
-    /**
-     * Get the user input from the search modal and send a request to get sales predictions for the user entered period.
-     * Adds the return results to the predictionSearches array, which will render a new component that will be displayed in the view search results div
-     */
-    const getSearchPeriod = () => {
-      if (!startDate.value.value || !endDate.value.value)
-        return alert("Please Enter Date Periods Before Searching !");
-
-      if (startDate.value.value > endDate.value.value)
-        return alert("Start Date Can Not Be A Later Date Than The End Date !");
-
-      axiosGet(
-        `getSearchPeriod?start=${startDate.value.value}&end=${endDate.value.value}&key=${props.productKey}`
-      ).then((response) => {
-        const id = `${startDate.value.value} - ${endDate.value.value}`;
-        const monthArray = response.monthArray;
-
-        if (response.periodSales === undefined) return alert(response);
-
-        predictionSearches.results[id] = {
-          totalSales: response.totalPeriodSales,
-          chartOptions: {
-            chart: {
-              id,
-            },
-            xaxis: {
-              categories: monthArray,
-            },
-          },
-          series: [
-            {
-              name: "Sales",
-              data: response.periodSales,
-            },
-          ],
-        };
-      });
-      showModalSearch.value = false;
     };
 
     // -----------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -372,12 +247,6 @@ export default {
       productQty,
       viewType,
       setView,
-      showModalSearch,
-      getSearchPeriod,
-      startDate,
-      endDate,
-      showSearchResults,
-      predictionSearches,
       weekChartOptions,
       weekChartSeries,
       yearChartOptions,
@@ -435,7 +304,7 @@ h1 {
 #productOrdersDiv {
   position: absolute;
   top: 25%;
-  width: 50%;
+  width: 45%;
   height: 57.5%;
   right: 0.5%;
   overflow-y: auto;
@@ -449,7 +318,7 @@ h1 {
 #stockHistoryDiv {
   position: absolute;
   top: 25%;
-  width: 50%;
+  width: 45%;
   height: 57.5%;
   right: 0.5%;
   overflow-y: auto;
@@ -458,38 +327,6 @@ h1 {
 #stockHistoryTbl {
   top: 0;
   border: thin solid grey;
-}
-
-#modalSearchPredictionBtns {
-  position: absolute;
-  display: flex;
-  left: 50%;
-  top: 85%;
-  transform: translate(-50%, -50%);
-  margin: 0 auto;
-}
-
-#modalSearchInput {
-  position: absolute;
-  left: 40%;
-  display: grid;
-  width: 20%;
-  align-items: center;
-}
-
-#modalSearchPredictionBox {
-  height: 25%;
-}
-
-#noResultsDiv {
-  text-align: center;
-}
-
-#searchGraphDiv {
-  position: relative;
-  display: flex;
-  margin: 0 auto;
-  width: 800px;
 }
 
 #pageOptionsDiv {
