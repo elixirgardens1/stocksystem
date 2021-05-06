@@ -63,11 +63,28 @@ const routes = [
   },
 ];
 
+let scrollPosition = {};
+
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      scrollPosition = savedPosition;
+    } else {
+      scrollPosition = { x: 0, y: 0 };
+    }
+  },
 });
+
 router.beforeEach((to, from, next) => {
   next();
+});
+
+// Wait and reload scroll position on previous page
+router.afterEach(() => {
+  setTimeout(() => {
+    window.scrollTo(scrollPosition);
+  }, 133);
 });
 export default router;
