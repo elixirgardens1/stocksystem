@@ -826,7 +826,8 @@ h3 {
   margin-right: 5px;
 }
 
-#viewProductsTbl thead {
+#viewProductsTbl th {
+  background: #009879;
   position: sticky;
   top: 40px;
   z-index: 1;
