@@ -11,14 +11,6 @@
   </div>
 
   <div id="pageOptionsDiv">
-    <input
-      id="homeViewBtn"
-      type="button"
-      class="navBtn"
-      value="Show Main View"
-      @click="true"
-    />
-
     <div id="viewLinksDiv">
       <input
         type="button"
