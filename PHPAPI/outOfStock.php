@@ -26,6 +26,9 @@
  * again collect a list of affected skus and fire requests to the platforms to restock the skus.
 */
 
+// Required classes
+// require_once 'MWSRequest.php';
+
 // Set connection to dbs
 $db = new PDO('sqlite:stock_control.db3');
 $barcodeDb = new PDO('sqlite:orders.db3');
@@ -93,7 +96,7 @@ $keyStock = $db->query($sql);
 $keyStock = $keyStock->fetchAll(PDO::FETCH_KEY_PAIR);
 
 // Get list of orderid / skus that have already been processed into the system
-$sql = "SELECT * FROM sku_stock";
+$sql = "SELECT 'orderId sku', date FROM sku_stock";
 $trackedOrderSkus = $db->query($sql);
 $trackedOrderSkus = $trackedOrderSkus->fetchAll(PDO::FETCH_KEY_PAIR);
 
@@ -113,6 +116,7 @@ foreach($orders5Days as $orderId => $order) {
                 // OrderID sku combinations that are not in the stock records
                 $orderStk[] = [
                     'orderID' => $orderId,
+                    'source' => $order['source'],
                     'sku' => $item['SKU'],
                     'qty' => $item['quantity'],
                     'atts' => $skuKeyAtts[$item['SKU']],
@@ -182,10 +186,10 @@ foreach($keyStock as $key => $qty) {
 $db->commit();
 
 // Insert processed orderids into sku_stock, in format {orderid}{sku} as unique identifier for orderid
-$stmt = $db->prepare("INSERT INTO sku_stock VALUES (?,?)");
+$stmt = $db->prepare("INSERT INTO sku_stock VALUES (?,?,?,?)");
 $db->beginTransaction();
 foreach ($orderStk as $order) {
-    $stmt->execute([$order['orderID'] . $order['sku'], date("Ymd")]);
+    $stmt->execute([$order['orderID'] . $order['sku'], $order['source'],  $order['sku'],date("Ymd")]);
 }
 $db->commit();
 
@@ -198,11 +202,8 @@ foreach ($skusNotInStk as $sku) {
 }
 $db->commit();
 
-// Test update stock_control before doing out of stocking
-
-/// DEBUG
-echo '<pre style="background: black;  color: white;">'; print_r($orderStk); echo '</pre>'; die();
 die();
+
 
 /*
  * Now calculate the days to out of stock for keys and out of stock the affected skus on the platforms
@@ -214,9 +215,9 @@ $sql = "SELECT key,qty FROM stock";
 $keyQtys = $db->query($sql);
 $keyQtys = $keyQtys->fetchAll(PDO::FETCH_KEY_PAIR);
 
-// Calculate the days to out of stock value for each of the keys in keyQtys
 $timeStampMinusMonth = date("Ymd", strtotime("1 month ago"));
 
+// Calculate the days to out of stock value for each of the keys in keyQtys
 $sql = "SELECT key, qty, date FROM stock_change WHERE date >= $timeStampMinusMonth ORDER BY date DESC";
 $keyStockChange = $db->query($sql);
 $keyStockChange = $keyStockChange->fetchAll(PDO::FETCH_ASSOC);
@@ -265,6 +266,110 @@ $outOfStockProducts = $db->query($sql);
 $outOfStockProducts = array_flip($outOfStockProducts->fetchAll(PDO::FETCH_COLUMN));
 
 // Check each of these products is actually out of stock on the platforms
+$parameters = [
+    'ReportType' => '_GET_MERCHANT_LISTINGS_INACTIVE_DATA_',
+];
+
+$requestOos = $MWSR->request('RequestReport', $parameters, 'Reports');
+$requestOos  = json_decode(json_encode(new SimpleXMLElement($requestOos)), true);
+
+// This will be used to request the status of the report on amazons side, when the status of the report
+// is set to _DONE_ they will return a reportId to get the report data.
+$reportRequestId = $requestOos['RequestReportResult']['ReportRequestInfo']['ReportRequestId'];
+
+// Give them few mins to sort it out
+sleep(180);
+
+function checkReportStatus () {
+    $parameters = [
+        'ReportRequestIdList.Id.1' => $reportRequestId,
+        'ReportTypeList.Type.1' => '_GET_MERCHANT_LISTINGS_INACTIVE_DATA_',
+        'ReportProcessingStatusList.Status.1' => '_DONE_',
+    ];
+
+    $requestOos = $MWSR->request('GetReportRequestList', $parameters, 'Reports');
+    $requestOos = json_decode(json_encode(new SimpleXMLElement($requestOos)), true);
+
+    // If report is not ready to be requested return false
+    if ($requestOos['GetReportRequestListResult']['ReportRequestInfo']['ReportProcessingStatus'] != '_DONE_') {
+        return false;
+    }
+
+    // Get generated report id, this is required to get the report
+    return $requestOos['GetReportRequestListResult']['ReportRequestInfo']['GeneratedReportId'];
+}
+
+// Attempt to check the status of the report, do this a max of 5 times, if still pending cancel script
+for ($i = 0; $i < 5; $i++) {
+
+    $statusResponse = checkReportStatus();
+
+    if ($statusResponse !== false) {
+        $generatedReportId = $statusResponse;
+        break;
+    }
+
+    // If the report check returns false, wait 2 mins and check again
+    sleep(120);
+}
+
+if (!isset($generatedReportId)) {
+    // PUT AN ERROR MESSAGE INTO STOCK CONTROL ERROR TABLE
+}
+
+// With the generatedReportId we can request the report data
+$parameters = [
+    'ReportId' => $generatedReportId,
+];
+
+// This will be a raw tab delimited string, this will be quite messy and will contain lots of borken
+// strings due to the commas and special characters in the listing descriptions etc
+$requestOos = $MWSR->request('GetReport', $parameters, 'Reports');
+
+// Get headers from the file
+$headers = explode("\n", $requestOos)[0];
+$headers = array_flip(explode("\t", $headers));
+
+$headersCount = count($headers) - 1;
+
+// Explode the tab delimited string into array format
+$arr = explode("\t", $requestOos);
+
+// i for each listing index, j for the proerties for each listing index
+$tmp = [];
+$i = 0;
+$j = 0;
+foreach ($arr as $index => $value) {
+
+    // If not a header add to array
+    if (!isset($headers[$value])) {
+        $tmp[$i][$j] = $value;
+
+        // Increment property count for current listing index
+        $j++;
+    }
+
+    // At 30 properties for listing index, reset i and j to build the next listing
+    if ($j == $headersCount) {
+        $i++;
+        $j = 0;
+    }
+}
+$arr = $tmp;
+
+// Build array of sku -> qty, which will be used to check that the skus we have currently out of stock
+// on the system are actually out of stock on the platforms
+$tmp = [];
+foreach ($arr as $index => $value) {
+    if (isset($value[3]) && isset($value[5])) {
+        $sku = $value[3];
+        $qty = $value[5];
+
+        $tmp[$sku] = $qty;
+    }
+}
+$arr = $tmp;
+
 // get list of skus that should be out of stock due to these products being out of stock
 $sql = "SELECT sku, atts FROM sku_atts";
 $keySkus = $db->query($sql);
@@ -289,7 +394,7 @@ $keySkus = $tmp;
 
 /// DEBUG
 echo '<pre style="background: black;  color: white;">';
-print_r(count($keySkus));
+print_r($keySkus);
 echo '</pre>';
 die();
 
