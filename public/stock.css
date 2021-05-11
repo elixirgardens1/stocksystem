@@ -118,16 +118,27 @@ select {
   }
 }
 
+#pendingTbl th {
+  background: lightcoral;
+  position: sticky;
+  top: 40px;
+  z-index: 1;
+}
+
+#pendingTbl th {
+  height: 50px;
+}
+
+#pendingTbl td {
+  width: 75px;
+}
+
 #modalForm th {
   background: royalblue;
 }
 
 #itemsTable th {
   background: royalblue;
-}
-
-#pendingTbl th {
-  background: lightcoral;
 }
 
 #stockHistoryTbl thead {
