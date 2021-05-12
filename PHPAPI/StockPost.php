@@ -281,7 +281,7 @@ if (isset($requestBody['processPendingProduct'])) {
     }
 
     // Update the product to have status Complete in the ordered_stock table
-    $stmtOrderedStock = $db->prepare("UPDATE ordered_stock SET status = ?, del_num = ?, signed = ? WHERE ord_num = ? AND key = ?");
+    $stmtOrderedStock = $db->prepare("UPDATE ordered_stock SET status = ?, del_num = ?, signed = ?, exp_del_date = ? WHERE ord_num = ? AND key = ?");
     // Update the values in stock table
     $stmtStock = $db->prepare("UPDATE stock SET qty = qty + ? WHERE key = ?");
     // Update stock_change table
@@ -291,7 +291,7 @@ if (isset($requestBody['processPendingProduct'])) {
 
     // Execute the variables needed to update the tables
     $db->beginTransaction();
-    $stmtOrderedStock->execute(['Complete', $processProduct['Delivery Number'], $processProduct['signedBy'], $processProduct['Order Number'], $processProduct['Key']]);
+    $stmtOrderedStock->execute(['Complete', $processProduct['Delivery Number'], $processProduct['signedBy'], date("Ymd"), $processProduct['Order Number'], $processProduct['Key']]);
     $stmtStock->execute([$processProduct['Qty'], $processProduct['Key']]);
     $stmtStockChange->execute([$processProduct['Qty'], $processProduct['Key']]);
     $stmtUpdatedStock->execute([$processProduct['Key'], $processProduct['Qty'], $processProduct['Delivery Number'], date('YmdHi')]);
@@ -309,7 +309,7 @@ if (isset($requestBody['processOrder'])) {
     // Prepare statements required to update the database tables
     $stmtStock = $db->prepare("UPDATE stock SET qty = qty + ? WHERE key = ?");
     $stmtStockChange = $db->prepare("UPDATE stock_change SET qty = (qty + ?) + qty + (qty * -1) WHERE key = ?");
-    $stmtOrderedStock = $db->prepare("UPDATE ordered_stock SET status = ?, del_num = ?, signed = ? WHERE ord_num = ? AND key = ?");
+    $stmtOrderedStock = $db->prepare("UPDATE ordered_stock SET status = ?, del_num = ?, signed = ?, exp_del_date = ? WHERE ord_num = ? AND key = ?");
     $stmtProductOrdersPrices = $db->prepare("UPDATE product_orders_prices SET delivery_number = ?, date_delivered = ?, ord_value = ?, status = ? WHERE ord_num = ?");
     $stmtUpdatedStock = $db->prepare("INSERT INTO updated_stock VALUES(?,?,?,?)");
     $db->beginTransaction();
@@ -347,7 +347,7 @@ if (isset($requestBody['processOrder'])) {
 
         $stmtStock->execute([$product['Qty'], $product['Key']]);
         $stmtStockChange->execute([$product['Qty'], $product['Key']]);
-        $stmtOrderedStock->execute(['Complete', $orderProducts['deliveryNumber'], $orderProducts['signedBy'], $orderProducts['orderNumber'], $product['Key']]);
+        $stmtOrderedStock->execute(['Complete', $orderProducts['deliveryNumber'], $orderProducts['signedBy'], date('Ymd'), $orderProducts['orderNumber'], $product['Key']]);
         $stmtProductOrdersPrices->execute([$orderProducts['deliveryNumber'], date("Ymd", strtotime($orderProducts['orderDeliveryDate'])), $orderProducts['orderValue'], 'Complete', $orderProducts['orderNumber']]);
         $stmtUpdatedStock->execute([$product['Key'], $product['Qty'], $orderProducts['deliveryNumber'], date('YmdHi')]);
     }
