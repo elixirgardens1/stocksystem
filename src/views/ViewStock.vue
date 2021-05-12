@@ -29,6 +29,9 @@
             <option value="ddProducts">Products Due Delivery Today</option>
             <option value="removeShelf">Remove Shelf From All Products</option>
             <option value="noShelfProducts">Product Orders No Shelfs</option>
+            <option value="outOfStockDeliveries"
+              >Out Of Stock Deliveries</option
+            >
           </select>
         </div>
         <div id="modalExportBtns">
@@ -132,6 +135,7 @@
         <option value="to_be_hidden">Hidden Products</option>
         <option value="Days To OOS">No Sales</option>
         <option value="outOfStock">Out Of Stock</option>
+        >Out Of Stock Product Deliveries
       </select>
     </div>
 
@@ -320,6 +324,12 @@ export default {
         case "noShelfProducts":
           axiosGet("noShelfCsv").then((response) => {
             downloadCsv(response, "noShelfProcessedProducts");
+          });
+          break;
+
+        case "outOfStockDeliveries":
+          axiosGet("outOfStockDeliveries").then((response) => {
+            downloadCsv(response, "outOfStockDeliveries");
           });
           break;
 

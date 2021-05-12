@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die;
 }
 
-// $_GET['productInfo?key'] = 'acc';
+// $_GET['outOfStockDeliveries'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -828,15 +828,53 @@ if (isset($_GET['ddProducts'])) {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-if (isset($_GET['protectedAsins'])) {
-    $matrixDb = new PDO('sqlite:C:\inetpub\wwwroot\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3');
+if (isset($_GET['outOfStockDeliveries'])) {
+    $sql = "SELECT ordered_stock.key  as Key, products.product as Product, ordered_stock.qty as Qty, ordered_stock.ord_num as OrderNumber, ordered_stock.supplier as Supplier, 
+            ordered_stock.datetime as PlacedDate, ordered_stock.exp_del_date as DeliveryDate
+            FROM ordered_stock
+            JOIN products ON (ordered_stock.key = products.key)
+            WHERE products.outOfStock = 1 AND ordered_stock.status = 'Pending'";
+    $oosProductDeliveries = $db->query($sql);
+    $oosProductDeliveries = $oosProductDeliveries->fetchAll(PDO::FETCH_ASSOC);
 
-    $sql = "SELECT amazon_qrcodes.asin, count(amazon_qrcodes.asin) as asinCount,
-            protected_asins.active
-            FROM amazon_qrcodes
-            LEFT JOIN protected_asins ON (amazon_qrcodes.asin = protected_asins.asin)
-            GROUP BY amazon_qrcodes.asin
-            ORDER BY asinCount";
+    $ordersArr = [];
+    $longWait = [];
+    foreach ($oosProductDeliveries as $index => $product) {
+        $monthsAgo3 = strtotime('- 3 months');
+        $placedDate = strtotime($product['PlacedDate']);
+
+        if ($placedDate >= $monthsAgo3) {
+            $ordersArr[] = $product;
+        }
+    }
+
+    // Seperate orders made within the last 3 months from orders older than 3 months
+    $ordersArr[] = array_combine(array_keys($ordersArr[0]), array_fill(0, count(array_keys($ordersArr[0])), null));
+    $ordersArr[] = array_combine(array_keys($ordersArr[0]), array_fill(0, count(array_keys($ordersArr[0])), 'LONG WAIT ORDERS'));
+    $ordersArr[] = array_combine(array_keys($ordersArr[0]), array_fill(0, count(array_keys($ordersArr[0])), null));
+
+    foreach ($oosProductDeliveries as $index => $product) {
+        $placedDate = strtotime($product['PlacedDate']);
+
+        if ($placedDate <= $monthsAgo3) {
+            $ordersArr[] = $product;
+        }
+    }
+
+    echo json_encode($ordersArr, JSON_PRETTY_PRINT);
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+if (isset($_GET['protectedAsins'])) {
+    $matrixDb = new PDO('sqlite:matrixCodes.db3');
+
+    $sql = "SELECT protected_asins.asin, protected_asins.active,
+             count(amazon_qrcodes.asin) as asinCount
+             FROM protected_asins
+             LEFT JOIN amazon_qrcodes ON (protected_asins.asin = amazon_qrcodes.asin)
+             GROUP BY protected_asins.asin
+             ORDER BY asinCount";
     $protectedAsins = $matrixDb->query($sql);
     $protectedAsins = $protectedAsins->fetchAll(PDO::FETCH_ASSOC);
 
