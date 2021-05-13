@@ -94,6 +94,19 @@
         :data-arr="productHistory.value"
       ></DynamicTable>
     </div>
+
+    <h3 style="position: absolute; left: 72.5%; top: 65%;">
+      Rolling 30 Day Sales
+    </h3>
+    <div id="rolling30Div">
+      <apexchart
+        width="900"
+        height="290"
+        type="line"
+        :options="rolling30Options"
+        :series="rolling30Series"
+      ></apexchart>
+    </div>
   </div>
 </template>
 
@@ -143,11 +156,14 @@ export default {
     /**
      * On view mount
      */
-    let weekChartOptions = ref({});
-    let weekChartSeries = ref([]);
+    const weekChartOptions = ref({});
+    const weekChartSeries = ref([]);
 
-    let yearChartOptions = ref({});
-    let yearChartSeries = ref([]);
+    const yearChartOptions = ref({});
+    const yearChartSeries = ref([]);
+
+    const rolling30Options = ref({});
+    const rolling30Series = ref([]);
 
     onMounted(() => {
       axiosGet(`productInfo?key=${props.productKey}`).then((response) => {
@@ -193,6 +209,22 @@ export default {
           },
         ];
 
+        rolling30Options.value = {
+          chart: {
+            id: "Rolling Predictions Chart",
+          },
+          xaxis: {
+            categories: Object.keys(response.rolling30DaySales),
+          },
+        };
+
+        rolling30Series.value = [
+          {
+            name: "Sales",
+            data: Object.values(response.rolling30DaySales),
+          },
+        ];
+
         yearChartOptions.value = {
           chart: {
             id: "Year Predictions Chart",
@@ -217,8 +249,12 @@ export default {
 
         yearChartSeries.value = [
           {
-            name: "Sales",
+            name: "Last Year Sales",
             data: response.yearPredictions,
+          },
+          {
+            name: "This Year Sales",
+            data: response.thisYearSales,
           },
         ];
       });
@@ -243,6 +279,8 @@ export default {
       weekChartSeries,
       yearChartOptions,
       yearChartSeries,
+      rolling30Options,
+      rolling30Series,
     };
   },
 };
@@ -297,7 +335,7 @@ h1 {
   position: absolute;
   top: 25%;
   width: 45%;
-  height: 57.5%;
+  height: 40%;
   right: 0.5%;
   overflow-y: auto;
 }
@@ -311,7 +349,7 @@ h1 {
   position: absolute;
   top: 25%;
   width: 45%;
-  height: 57.5%;
+  height: 40%;
   right: 0.5%;
   overflow-y: auto;
 }
@@ -319,6 +357,12 @@ h1 {
 #stockHistoryTbl {
   top: 0;
   border: thin solid grey;
+}
+
+#rolling30Div {
+  position: absolute;
+  top: 67%;
+  right: 0.5%;
 }
 
 #pageOptionsDiv {

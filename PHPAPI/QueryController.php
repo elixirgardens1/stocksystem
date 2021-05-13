@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die;
 }
 
-// $_GET['outOfStockDeliveries'] = 'acc';
+// $_GET['productInfo?key'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -593,6 +593,23 @@ if (isset($_GET['productInfo?key'])) {
     $keyStockChange = $db->query($sql);
     $keyStockChange = $keyStockChange->fetchAll(PDO::FETCH_KEY_PAIR);
 
+    // Get most recent date from stock_change table
+    $startOfThisYear = date("Ymd", strtotime('first day of january this year'));
+    $endOfMostRecentMonth = date("Ymd", strtotime('last day of last month'));
+
+    // Get the key stock change for this year
+    $sql = "SELECT date, qty FROM stock_change WHERE key = '$key' AND date >= $startOfThisYear AND date <= $endOfMostRecentMonth ORDER BY date";
+    $thisYearStockChange = $db->query($sql);
+    $thisYearStockChange = $thisYearStockChange->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    //Get rolling 30 days sales stats
+    $start30Days = date("Ymd", strtotime('- 31 days'));
+    $end30Days = date("Ymd", strtotime('- 1 days'));
+
+    $sql = "SELECT date, qty FROM stock_change WHERE key = '$key' AND date >= $start30Days AND date <= $end30Days ORDER BY date";
+    $rolling30Days = $db->query($sql);
+    $rolling30Days = $rolling30Days->fetchAll(PDO::FETCH_KEY_PAIR);
+
     // Get recent inserts into the stock system for this product
     $sql = "SELECT * FROM updated_stock WHERE key = '$key' ORDER BY datetime DESC";
     $productHistory = $db->query($sql);
@@ -613,6 +630,7 @@ if (isset($_GET['productInfo?key'])) {
     }
     $productHistory = $tmp;
 
+    // Format into sales for each day for last year
     $tmp = [];
     foreach ($keyStockChange as $date => $qty) {
         $lastDay = array_keys($keyStockChange);
@@ -626,6 +644,35 @@ if (isset($_GET['productInfo?key'])) {
     }
     $keyStockChange = $tmp;
 
+    // Format into sales for each day of this year
+    $tmp = [];
+    foreach ($thisYearStockChange as $date => $qty) {
+        $lastDay = array_keys($thisYearStockChange);
+        $lastDay = end($lastDay);
+
+        if ($date != $lastDay) {
+            $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
+            $nextDate = $nextDate->format('Ymd');
+            $tmp[$date] = $qty - $thisYearStockChange[$nextDate];
+        }
+    }
+    $thisYearStockChange = $tmp;
+
+    // Format into sales for each day for rolling 30
+    $tmp = [];
+    foreach ($rolling30Days as $date => $qty) {
+        $lastDay = array_keys($rolling30Days);
+        $lastDay = end($lastDay);
+
+        if ($date != $lastDay) {
+            $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
+            $nextDate = $nextDate->format('Ymd');
+            $date = date('M-d', strtotime($date));
+            $tmp[$date] = $qty - $rolling30Days[$nextDate];
+        }
+    }
+    $rolling30Days = $tmp;
+
     $startWeek = date("Ymd", strtotime('- 8 days'));
     $endWeek = date("Ymd", strtotime('now'));
 
@@ -634,7 +681,7 @@ if (isset($_GET['productInfo?key'])) {
     $salesPastWeek = $db->query($sql);
     $salesPastWeek = $salesPastWeek->fetchAll(PDO::FETCH_KEY_PAIR);
 
-    // Get sales by day
+    // Get sales by day for past week
     $tmp = [];
     foreach ($salesPastWeek as $date => $qty) {
         $lastDay = array_keys($salesPastWeek);
@@ -648,6 +695,7 @@ if (isset($_GET['productInfo?key'])) {
     }
     $salesPastWeek = $tmp;
 
+    // Build array to de displayed in the apex charts, using the names of the days from the previous week
     $totalSalesPastWeek = 0;
     $tmp = [];
     foreach ($salesPastWeek as $index => $dayQty) {
@@ -660,7 +708,9 @@ if (isset($_GET['productInfo?key'])) {
     }
     $salesPastWeek = $tmp;
 
+    // Build array of stats for previous year predictions
     $yearPredictions = [];
+    $thisYearPredicitons = [];
     $j = 0;
     for ($i = 1; $i < 13; $i++) {
         $startMonth = DateTime::createFromFormat('!m', $i);
@@ -668,16 +718,26 @@ if (isset($_GET['productInfo?key'])) {
         $startMonth = $startMonth->format("F");
         $endMonth = $endMonth->format("F");
 
-        $startDate = date("Ymd", strtotime('first day of ' . $startMonth . ' last year'));
-        $endDate = date("Ymd", strtotime('first day of ' . $endMonth . ' last year'));
+        $startDateLast = date("Ymd", strtotime('first day of ' . $startMonth . ' last year'));
+        $endDateLast = date("Ymd", strtotime('first day of ' . $endMonth . ' last year'));
+
+        $startDateThis = date("Ymd", strtotime('first day of ' . $startMonth));
+        $endDateThis = date("Ymd", strtotime('first day of ' . $endMonth));
+
         if ($startMonth == 'December') {
-            $endDate = date("Ymd", strtotime('first day of ' . $endMonth));
+            $endDateLast = date("Ymd", strtotime('first day of ' . $endMonth));
+            $endDateThis = date("Ymd", strtotime('first day of ' . $endMonth));
         }
 
-        $arr = getPeriod($startDate, $endDate, $keyStockChange);
+        $lastYearPeriod = getPeriod($startDateLast, $endDateLast, $keyStockChange);
+        $thisYearPeriod = getPeriod($startDateThis, $endDateThis, $thisYearStockChange);
 
-        // Increase by 10% margin to account for company growth
-        $yearPredictions[$j] = ceil(periodTotalSales($arr) * 1.1);
+        // Increase by 10% margin to account for company growth from previous year
+        $yearPredictions[$j] = ceil(periodTotalSales($lastYearPeriod) * 1.1);
+        $thisYearPeriodTotal = ceil(periodTotalSales($thisYearPeriod));
+
+        // Ignore months with no sales for this year
+        $thisYearPredicitons[$j] = $thisYearPeriodTotal == 0 ? null : $thisYearPeriodTotal;
         $j++;
     }
     $totalSalesYearPrediction = periodTotalSales($yearPredictions);
@@ -692,9 +752,12 @@ if (isset($_GET['productInfo?key'])) {
         'productOrders' => $productOrders,
         'productHistory' => $productHistory,
         'salesWeekColumns' => array_keys($salesPastWeek),
+        'rolling30Columns' => array_keys($rolling30Days),
         'salesPastWeek' => array_values($salesPastWeek),
         'totalSalesPastWeek' => number_format($totalSalesPastWeek, 2),
         'yearPredictions' => $yearPredictions,
+        'thisYearSales' => $thisYearPredicitons,
+        'rolling30DaySales' => $rolling30Days,
         'totalSalesYearPrediction' => [
             'total' => number_format($totalSalesYearPrediction, 2),
             'quarter1' => $yearQuarters[0],
@@ -702,70 +765,6 @@ if (isset($_GET['productInfo?key'])) {
             'quarter3' => $yearQuarters[2],
             'quarter4' => $yearQuarters[3],
         ],
-    ];
-
-    echo json_encode($response, JSON_PRETTY_PRINT);
-}
-
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------
-
-if (isset($_GET['getSearchPeriod?start'])) {
-    $startDate = $_GET['getSearchPeriod?start'];
-    $endDate = $_GET['end'];
-    $key = $_GET['key'];
-
-    $numericStart = strtok($startDate, '-');
-    $numericStart = (int)strtok('-');
-    $numericEnd = strtok($endDate, '-');
-    $numericEnd = (int)strtok('-');
-
-    $startDate = date("Ymd", strtotime($startDate . '-1 year'));
-    $endDate = date("Ymd", strtotime($endDate . '-1 year +1 day'));
-
-    $sql = "SELECT date, qty FROM stock_change WHERE key = '$key' AND date >= $startDate AND date <= $endDate ORDER BY date DESC";
-    $predictionPeriod = $db->query($sql);
-    $predictionPeriod = $predictionPeriod->fetchAll(PDO::FETCH_KEY_PAIR);
-
-    $periodSales = getSalesForPeriod($predictionPeriod);
-
-    if (periodTotalSales($periodSales) == 0) {
-        echo json_encode("Prediction Of 0 Sales !, Try A Different Time Period", JSON_PRETTY_PRINT);
-        die();
-    }
-
-    $tmp = [];
-    $j = 0;
-    for ($i = $numericStart; $i <= $numericEnd; $i++) {
-        $startMonth = DateTime::createFromFormat('!m', $i);
-        $endMonth  = DateTime::createFromFormat('!m', $i + 1);
-        $startMonth = $startMonth->format("M");
-        $endMonth = $endMonth->format("M");
-
-        $startDate  = date("Ymd", strtotime('first day of ' . $startMonth . ' last year'));
-        $endDate = date("Ymd", strtotime('first day of ' . $endMonth . ' last year'));
-        $arr = getPeriod($startDate, $endDate, $periodSales);
-
-        // Increase by 10% margin to account for company growth
-        $tmp[$j] = ceil(periodTotalSales($arr) * 1.1);
-        $j++;
-    }
-    // $periodSales = array_reverse($tmp);
-    $periodSales = $tmp;
-
-    $start = (new DateTime($startDate))->modify('first day of this month');
-    $end = (new DateTime($endDate))->modify('first day of this month');
-    $interval = DateInterval::createFromDateString('1 month');
-    $period = new DatePeriod($start, $interval, $end);
-
-    $monthArray = [];
-    foreach ($period as $dt) {
-        $monthArray[] = $dt->format("M");
-    }
-
-    $response = [
-        'periodSales' => $periodSales,
-        'totalPeriodSales' => periodTotalSales($periodSales),
-        'monthArray' => $monthArray,
     ];
 
     echo json_encode($response, JSON_PRETTY_PRINT);
