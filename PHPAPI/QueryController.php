@@ -667,7 +667,9 @@ if (isset($_GET['productInfo?key'])) {
         if ($date != $lastDay) {
             $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
             $nextDate = $nextDate->format('Ymd');
-            $date = date('M-d', strtotime($date));
+
+            $date = DateTime::createFromFormat('Ymd', $date - 1);
+            $date = $date->format('M-d');
             $tmp[$date] = $qty - $rolling30Days[$nextDate];
         }
     }
