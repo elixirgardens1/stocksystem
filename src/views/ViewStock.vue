@@ -350,7 +350,7 @@ export default {
     const modalHide = (key, type) => {
       if (!confirm("Are You Sure ?")) return false;
 
-      let setToBeHidden = "";
+      let setToBeHidden = null;
       if (type === "Hide") setToBeHidden = "y";
 
       let request = {};

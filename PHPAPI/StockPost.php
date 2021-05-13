@@ -14,6 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die;
 }
 
+$requestBody['hideProduct'] = [
+    'productKey' => 'fer32',
+    'toBeHidden' => 'y',
+];
+
 $requestBody = file_get_contents('php://input');
 $requestBody = json_decode($requestBody, true);
 
