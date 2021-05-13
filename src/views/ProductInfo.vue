@@ -96,7 +96,8 @@
     </div>
 
     <h3 style="position: absolute; left: 72.5%; top: 65%;">
-      Rolling 30 Day Sales
+      Rolling 30 Day Sales <span style="color:red;">|</span> Total:
+      {{ rolling30Total }}
     </h3>
     <div id="rolling30Div">
       <apexchart
@@ -164,6 +165,7 @@ export default {
 
     const rolling30Options = ref({});
     const rolling30Series = ref([]);
+    const rolling30Total = ref(0);
 
     onMounted(() => {
       axiosGet(`productInfo?key=${props.productKey}`).then((response) => {
@@ -225,6 +227,8 @@ export default {
           },
         ];
 
+        rolling30Total.value = response.rolling30Total;
+
         yearChartOptions.value = {
           chart: {
             id: "Year Predictions Chart",
@@ -281,6 +285,7 @@ export default {
       yearChartSeries,
       rolling30Options,
       rolling30Series,
+      rolling30Total,
     };
   },
 };

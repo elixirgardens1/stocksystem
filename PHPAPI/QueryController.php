@@ -751,7 +751,7 @@ if (isset($_GET['productInfo?key'])) {
         'productInfo' => $productInfo,
         'productOrders' => $productOrders,
         'productHistory' => $productHistory,
-        'salesWeekColumns' => array_keys($salesPastWeek),
+        'rolling30Total' => periodTotalSales($rolling30Days),
         'rolling30Columns' => array_keys($rolling30Days),
         'salesPastWeek' => array_values($salesPastWeek),
         'totalSalesPastWeek' => number_format($totalSalesPastWeek, 2),
