@@ -6,7 +6,7 @@
       {{ productName }}
       <span style="color: red;">|</span> Supplier:
       {{ productSupplier }}
-      <span style="color: red;">|</span> Qty: {{ productQty }}
+      <span style="color: red;">|</span> Qty: {{ productQty }} {{ productUnit }}
     </h2>
   </div>
 
@@ -154,6 +154,7 @@ export default {
     const productName = ref("");
     const productSupplier = ref("");
     const productQty = ref(0);
+    const productUnit = ref("");
 
     const productColumns = ref([]);
     const productOrderColumns = ref([]);
@@ -193,6 +194,7 @@ export default {
           productName.value = product.value[0].product;
           productSupplier.value = product.value[0].primary_supplier;
           productQty.value = product.value[0].qty;
+          productUnit.value = product.value[0].unit;
         }
 
         if (Object.keys(productHistory.value).length > 0) {
@@ -292,6 +294,7 @@ export default {
       productName,
       productSupplier,
       productQty,
+      productUnit,
       viewType,
       setView,
       weekChartOptions,

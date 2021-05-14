@@ -561,6 +561,8 @@ if (isset($_GET['productInfo?key'])) {
     $productInfo = $db->query($sql);
     $productInfo = $productInfo->fetchAll(PDO::FETCH_ASSOC);
 
+    $productInfo[0]['unit'] = $unitLookup[$productInfo[0]['unit']];
+
     $greaterThan6Month = strtotime('-6 months');
 
     // Get the orders that the key belongs to, greater than 6 months ago
@@ -619,13 +621,13 @@ if (isset($_GET['productInfo?key'])) {
     foreach ($productHistory as $index => $product) {
         $placedDate = 'No Set';
         if (isset($product['datetime'])) {
-            $placedDate = date("Y-m-d", strtotime($product['datetime']));
+            $deliveryDate = date("Y-m-d", strtotime($product['datetime']));
         }
         $tmp[] = [
             'Key' => $product['key'],
             'Qty' => $product['qty'],
             'Delivery Id' => $product['deliveryID'],
-            'Placed date' => $placedDate,
+            'Delivery Date' => $deliveryDate,
         ];
     }
     $productHistory = $tmp;
