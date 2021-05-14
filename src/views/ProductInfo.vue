@@ -15,98 +15,108 @@
       <input
         type="button"
         class="navBtn"
-        value="Order History"
-        @click="setView('orderHistory')"
+        value="Stock Stats"
+        @click="setView('stockStats')"
       />
       <input
         type="button"
         class="navBtn"
-        value="Stock History"
-        @click="setView('stockHistory')"
+        value="Order History"
+        @click="setView('stockInfo')"
       />
     </div>
   </div>
 
+  <div id="yearSalesDiv" v-show="viewType === 'stockStats'">
+    <h3>
+      Year Sales Predictions <span style="color: red;">|</span>Total:
+      {{ totalSalesYearPredictions.value.total }}
+    </h3>
+    <h4>
+      Quarter One: {{ totalSalesYearPredictions.value.quarter1 }}
+      <span style="color: red;">|</span> Quarter Two:
+      {{ totalSalesYearPredictions.value.quarter2 }}
+      <span style="color: red;">|</span> Quarter Three:
+      {{ totalSalesYearPredictions.value.quarter3 }}
+      <span style="color: red;">|</span>Quarter Four:
+      {{ totalSalesYearPredictions.value.quarter4 }}
+    </h4>
+    <h4>
+      January: {{ yearPredictions[0] }}
+      <span style="color: red;">|</span> February: {{ yearPredictions[1] }}
+      <span style="color: red;">|</span>
+      March: {{ yearPredictions[2] }} <span style="color: red;">|</span> April:
+      {{ yearPredictions[3] }} <span style="color: red;">|</span> May:
+      {{ yearPredictions[4] }} <span style="color: red;">|</span> June:
+      {{ yearPredictions[5] }} <span style="color: red;">|</span> July:
+      {{ yearPredictions[6] }} <span style="color: red;">|</span> August:
+      {{ yearPredictions[7] }} <span style="color: red;">|</span> September:
+      {{ yearPredictions[8] }} <span style="color: red;">|</span> October:
+      {{ yearPredictions[9] }} <span style="color: red;">|</span> November:
+      {{ yearPredictions[10] }} <span style="color: red;">|</span> December:
+      {{ yearPredictions[11] }}
+    </h4>
+
+    <apexchart
+      width="100%"
+      height="275"
+      type="line"
+      :options="yearChartOptions"
+      :series="yearChartSeries"
+    ></apexchart>
+  </div>
+
   <div id="leftContent">
-    <div id="weekSalesDiv">
+    <div id="weekSalesDiv" v-show="viewType === 'stockStats'">
       <h3 id="weekTitle">
         Last Week Sales <span style="color:red;">|</span>Total:
         {{ totalSalesPastWeek }}
       </h3>
 
       <apexchart
-        width="900"
-        height="275"
+        width="100%"
+        height="250"
         type="line"
         :options="weekChartOptions"
         :series="weekChartSeries"
       ></apexchart>
     </div>
 
-    <div id="yearSalesDiv">
+    <div id="productOrdersDiv" v-show="viewType === 'stockInfo'">
       <h3>
-        Year Sales Predictions <span style="color: red;">|</span>Total:
-        {{ totalSalesYearPredictions.value.total }}
+        Orders Containing Product
       </h3>
-      <h4>
-        Quarter One: {{ totalSalesYearPredictions.value.quarter1 }}
-        <span style="color: red;">|</span> Quarter Two:
-        {{ totalSalesYearPredictions.value.quarter2 }}
-        <span style="color: red;">|</span> Quarter Three:
-        {{ totalSalesYearPredictions.value.quarter3 }}
-        <span style="color: red;">|</span>Quarter Four:
-        {{ totalSalesYearPredictions.value.quarter4 }}
-      </h4>
 
-      <apexchart
-        width="900"
-        height="275"
-        type="line"
-        :options="yearChartOptions"
-        :series="yearChartSeries"
-      ></apexchart>
+      <ScrollTable
+        :table-columns="productOrderColumns"
+        :table-data="productOrders.value"
+      ></ScrollTable>
     </div>
 
-    <h3
-      style="position: absolute; left: 70%;"
-      v-show="viewType === 'orderHistory'"
-    >
-      Orders Containing Product
-    </h3>
-    <div id="productOrdersDiv" v-show="viewType === 'orderHistory'">
-      <DynamicTable
-        id="productOrdersTbl"
-        :columns="productOrderColumns"
-        :data-arr="productOrders.value"
-      ></DynamicTable>
+    <div id="stockHistoryDiv" v-show="viewType === 'stockInfo'">
+      <h3>
+        Stock History
+      </h3>
+      <ScrollTable
+        :table-columns="productHistoryColumns"
+        :table-data="productHistory.value"
+      ></ScrollTable>
     </div>
 
-    <h3
-      style="position: absolute; left: 72.5%;"
-      v-show="viewType === 'stockHistory'"
-    >
-      Stock History
-    </h3>
-    <div id="stockHistoryDiv" v-show="viewType === 'stockHistory'">
-      <DynamicTable
-        id="stockHistoryTbl"
-        :columns="productHistoryColumns"
-        :data-arr="productHistory.value"
-      ></DynamicTable>
-    </div>
-
-    <h3 style="position: absolute; left: 72.5%; top: 65%;">
-      Rolling 30 Day Sales <span style="color:red;">|</span> Total:
-      {{ rolling30Total }}
-    </h3>
-    <div id="rolling30Div">
-      <apexchart
-        width="900"
-        height="290"
-        type="line"
-        :options="rolling30Options"
-        :series="rolling30Series"
-      ></apexchart>
+    <div v-show="viewType === 'stockStats'">
+      <h3 style="position: absolute; left: 72.5%; top: 63%;">
+        Rolling 30 Day Sales <span style="color:red;">|</span> Total:
+        {{ rolling30Total }}
+      </h3>
+      <div id="rolling30Div">
+        <apexchart
+          width="100%"
+          height="290"
+          type="line"
+          :options="rolling30Options"
+          :series="rolling30Series"
+        ></apexchart>
+      </div>
     </div>
   </div>
 </template>
@@ -114,13 +124,13 @@
 <script>
 import { onMounted, reactive, ref } from "@vue/runtime-core";
 import { axiosGet } from "@/composables/axiosGet.js";
-import DynamicTable from "@/components/DynamicTable.vue";
+import ScrollTable from "@/components/PredictionsTable.vue";
 import VueApexCharts from "vue3-apexcharts";
 
 export default {
   name: "ProductInfo",
   components: {
-    DynamicTable,
+    ScrollTable,
     apexchart: VueApexCharts,
   },
   props: {
@@ -138,7 +148,7 @@ export default {
     const totalSalesYearPredictions = reactive({ value: {} });
     const totalSalesPastWeek = ref(0);
     const productHistory = reactive({ value: {} });
-    const viewType = ref("orderHistory");
+    const viewType = ref("stockStats");
 
     const prodKey = ref("");
     const productName = ref("");
@@ -148,6 +158,8 @@ export default {
     const productColumns = ref([]);
     const productOrderColumns = ref([]);
     const productHistoryColumns = ref([]);
+
+    const yearPredictions = ref([]);
 
     const setView = (type) => {
       viewType.value = type;
@@ -195,6 +207,8 @@ export default {
           productOrders.value = {};
         }
 
+        yearPredictions.value = response.yearPredictions;
+
         weekChartOptions.value = {
           chart: {
             id: "Week Predictions Chart",
@@ -234,31 +248,32 @@ export default {
             id: "Year Predictions Chart",
           },
           xaxis: {
-            categories: [
-              "January",
-              "February",
-              "March",
-              "April",
-              "May",
-              "June",
-              "July",
-              "August",
-              "September",
-              "October",
-              "November",
-              "December",
-            ],
+            // categories: [
+            //   "January",
+            //   "February",
+            //   "March",
+            //   "April",
+            //   "May",
+            //   "June",
+            //   "July",
+            //   "August",
+            //   "September",
+            //   "October",
+            //   "November",
+            //   "December",
+            // ],
+            categories: Object.values(response.keyStockColumns),
           },
         };
 
         yearChartSeries.value = [
           {
             name: "Last Year Sales",
-            data: response.yearPredictions,
+            data: Object.values(response.keyStockChange),
           },
           {
             name: "This Year Sales",
-            data: response.thisYearSales,
+            data: Object.values(response.thisYearSales),
           },
         ];
       });
@@ -286,6 +301,7 @@ export default {
       rolling30Options,
       rolling30Series,
       rolling30Total,
+      yearPredictions,
     };
   },
 };
@@ -315,16 +331,21 @@ h1 {
 
 #weekSalesDiv {
   position: absolute;
-  top: 20%;
+  top: 60%;
+  width: 45%;
   float: left;
   width: 47.5%;
 }
 
 #yearSalesDiv {
   position: absolute;
-  top: 55%;
+  top: 18%;
   float: left;
-  width: 47.5%;
+  width: 99%;
+}
+
+#yearSalesDiv h4 {
+  text-align: center;
 }
 
 #searchBtn {
@@ -333,40 +354,27 @@ h1 {
 
 #viewLinksDiv {
   position: absolute;
-  right: 0.5%;
+  float: left;
 }
 
 #productOrdersDiv {
   position: absolute;
-  top: 25%;
+  top: 18%;
   width: 45%;
-  height: 40%;
   right: 0.5%;
-  overflow-y: auto;
-}
-
-#productOrdersTbl {
-  top: 0;
-  border: thin solid grey;
 }
 
 #stockHistoryDiv {
   position: absolute;
-  top: 25%;
+  top: 18%;
   width: 45%;
-  height: 40%;
-  right: 0.5%;
-  overflow-y: auto;
-}
-
-#stockHistoryTbl {
-  top: 0;
-  border: thin solid grey;
+  left: 0.5%;
 }
 
 #rolling30Div {
   position: absolute;
-  top: 67%;
+  top: 65%;
+  width: 45%;
   right: 0.5%;
 }
 

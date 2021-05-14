@@ -595,7 +595,7 @@ if (isset($_GET['productInfo?key'])) {
 
     // Get most recent date from stock_change table
     $startOfThisYear = date("Ymd", strtotime('first day of january this year'));
-    $endOfMostRecentMonth = date("Ymd", strtotime('last day of last month'));
+    $endOfMostRecentMonth = date("Ymd", strtotime('- 1 day'));
 
     // Get the key stock change for this year
     $sql = "SELECT date, qty FROM stock_change WHERE key = '$key' AND date >= $startOfThisYear AND date <= $endOfMostRecentMonth ORDER BY date";
@@ -713,6 +713,7 @@ if (isset($_GET['productInfo?key'])) {
     // Build array of stats for previous year predictions
     $yearPredictions = [];
     $thisYearPredicitons = [];
+    $lastYearColumns = [];
     $j = 0;
     for ($i = 1; $i < 13; $i++) {
         $startMonth = DateTime::createFromFormat('!m', $i);
@@ -744,6 +745,52 @@ if (isset($_GET['productInfo?key'])) {
     }
     $totalSalesYearPrediction = periodTotalSales($yearPredictions);
 
+    // Roughly seperate sales into weeks for previous years sales
+    $tmp = [];
+    $j = 1;
+    $weekSales = 0;
+    $dayCount = 0;
+    foreach ($keyStockChange as $date => $qty) {
+        $weekSales += $qty;
+        $dayCount++;
+
+        if ($dayCount == 7) {
+            $tmp[$j] = ceil($weekSales * 1.1);
+            $dayCount = 0;
+            $weekSales = 0;
+            $j++;
+        }
+    }
+    $keyStockChange = $tmp;
+
+    // Roughly seperate sales into weeks for this years sales
+    $tmp = [];
+    $j = 1;
+    $weekSales = 0;
+    $dayCount = 0;
+    foreach ($thisYearStockChange as $date => $qty) {
+        $weekSales += $qty;
+        $dayCount++;
+
+        if ($dayCount == 7) {
+            $tmp[$j] = $weekSales;
+            $dayCount = 0;
+            $weekSales = 0;
+            $j++;
+        }
+    }
+    $thisYearStockChange = $tmp;
+
+    // Dodgy method for making array of headers for the graph, since it needs a corresponding header index for each data point
+    $keyStockChangeColumns = array_combine(array_keys($keyStockChange), array_fill(0, count($keyStockChange), ''));
+    $monthNum = 1;
+    for ($i = 4; $i < 52; $i += 4) {
+        $monthTitle = DateTime::createFromFormat('!m', $monthNum);
+        $monthTitle = $monthTitle->format('F');
+        $keyStockChangeColumns[$i] = $monthTitle;
+        $monthNum++;
+    }
+
     $yearQuarters = [];
     for ($i = 0; $i < 12; $i += 3) {
         $yearQuarters[] = periodTotalSales(array_slice($yearPredictions, $i, 3));
@@ -755,10 +802,13 @@ if (isset($_GET['productInfo?key'])) {
         'productHistory' => $productHistory,
         'rolling30Total' => periodTotalSales($rolling30Days),
         'rolling30Columns' => array_keys($rolling30Days),
+        'salesWeekColumns' => array_keys($salesPastWeek),
         'salesPastWeek' => array_values($salesPastWeek),
         'totalSalesPastWeek' => number_format($totalSalesPastWeek, 2),
         'yearPredictions' => $yearPredictions,
-        'thisYearSales' => $thisYearPredicitons,
+        'keyStockChange' => $keyStockChange,
+        'keyStockColumns' => $keyStockChangeColumns,
+        'thisYearSales' => $thisYearStockChange,
         'rolling30DaySales' => $rolling30Days,
         'totalSalesYearPrediction' => [
             'total' => number_format($totalSalesYearPrediction, 2),
