@@ -169,7 +169,13 @@ export default {
         predictionsData.value = response.spProducts;
         productCats.value = response.productCats;
         upProducts.value = response.trendingBelow;
-        upProductsColumns.value = Object.keys(upProducts.value[0]);
+
+        console.log(response);
+
+        let firstProductKey = Object.keys(upProducts.value)[0];
+        upProductsColumns.value = Object.keys(
+          upProducts.value[firstProductKey]
+        );
       });
     });
 

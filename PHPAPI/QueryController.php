@@ -786,16 +786,6 @@ if (isset($_GET['productInfo?key'])) {
     }
     $thisYearStockChange = $tmp;
 
-    // Dodgy method for making array of headers for the graph, since it needs a corresponding header index for each data point
-    // $keyStockChangeColumns = array_combine(array_keys($keyStockChange), array_fill(0, count($keyStockChange), ''));
-    // $monthNum = 1;
-    // for ($i = 4; $i < 52; $i += 4) {
-    //     $monthTitle = DateTime::createFromFormat('!m', $monthNum);
-    //     $monthTitle = $monthTitle->format('F');
-    //     $keyStockChangeColumns[$i] = $monthTitle;
-    //     $monthNum++;
-    // }
-
     $yearQuarters = [];
     for ($i = 0; $i < 12; $i += 3) {
         $yearQuarters[] = periodTotalSales(array_slice($yearPredictions, $i, 3));
@@ -1157,7 +1147,14 @@ if (isset($_GET['stockPredictions'])) {
             $currentSalesWeek2 = $sales[key($currentWeek2)];
 
             if (($currentSalesWeek1 < $predictedSalesWeek1) && ($currentSalesWeek2 < $predictedSalesWeek2)) {
-                $trendingBelow[] = $productInfo[$key];
+                // Calculate percentage decrease between the predicted sales and the current sales
+                $percentageDifference = 0;
+                if ($currentSalesWeek1 != 0) {
+                    $percentageDifference = abs(number_format((($currentSalesWeek1 - $predictedSalesWeek1) / $predictedSalesWeek1) * 100, 2));
+                }
+
+                $trendingBelow[$key] = $productInfo[$key];
+                $trendingBelow[$key]['Percent Difference'] = isset($percentageDifference) ? $percentageDifference : 0;
             }
         }
     }
