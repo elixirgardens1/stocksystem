@@ -2,48 +2,71 @@
   <div v-if="Object.keys(predictionsData.value).length !== 0">
     <div id="headerDiv">
       <h1>Stock Predictions</h1>
+      <input
+        id="predictionsBtn"
+        type="button"
+        class="navBtn"
+        value="Predictions"
+        @click="viewType = 'viewPredictions'"
+      />
+      <input
+        id="productsBtn"
+        type="button"
+        class="navBtn"
+        value="Under Performing Products"
+        @click="viewType = 'viewProducts'"
+      />
     </div>
 
-    <div id="filterDiv">
-      <div id="filterContainer">
-        <select id="filterCategory" v-model="selectedCat">
-          <option disabled selected>Select Category</option>
-          <option v-for="(cat, index) in productCats" :key="index">{{
-            cat
-          }}</option>
-        </select>
+    <div v-show="viewType === 'viewPredictions'">
+      <div id="filterDiv">
+        <div id="filterContainer">
+          <select id="filterCategory" v-model="selectedCat">
+            <option disabled selected>Select Category</option>
+            <option v-for="(cat, index) in productCats" :key="index">{{
+              cat
+            }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="predictionsFilterDiv">
+        <div>
+          <input
+            id="keyInput"
+            type="text"
+            placeholder="Filter By Key"
+            v-model="filterKeyInput"
+          />
+
+          <input
+            type="text"
+            placeholder="Filter By Product"
+            v-model="filterProductInput"
+          />
+        </div>
+      </div>
+
+      <div id="predictionsDiv">
+        <h1 v-if="selectedCat === 'Select Category'">
+          Select Product Category
+        </h1>
+        <PredictionsTable
+          v-else
+          id="predictionTable"
+          :tableColumns="predictionsColumns"
+          :tableData="filterCat"
+          @filter-column="setFilter"
+        ></PredictionsTable>
       </div>
     </div>
+  </div>
 
-    <div id="predictionsFilterDiv">
-      <div>
-        <input
-          id="keyInput"
-          type="text"
-          placeholder="Filter By Key"
-          v-model="filterKeyInput"
-        />
-
-        <input
-          type="text"
-          placeholder="Filter By Product"
-          v-model="filterProductInput"
-        />
-      </div>
-    </div>
-
-    <div id="predictionsDiv">
-      <h1 v-if="selectedCat === 'Select Category'">
-        Select Product Category
-      </h1>
-      <PredictionsTable
-        v-else
-        id="predictionTable"
-        :tableColumns="predictionsColumns"
-        :tableData="filterCat"
-        @filter-column="setFilter"
-      ></PredictionsTable>
-    </div>
+  <div id="uppDiv" v-show="viewType === 'viewProducts'">
+    <PredictionsTable
+      :tableColumns="Object.keys(upProducts[0])"
+      :tableData="upProducts"
+    ></PredictionsTable>
   </div>
 
   <div id="loadingDiv" v-if="Object.keys(predictionsData.value).length === 0">
@@ -91,6 +114,8 @@ export default {
     const filterType = ref("");
     const filterKeyInput = ref("");
     const filterProductInput = ref("");
+    const viewType = ref("viewPredictions");
+    const upProducts = ref([]);
 
     const filterCat = computed(() => {
       if (!selectedCat.value || selectedCat.value == "Select Category") {
@@ -142,6 +167,7 @@ export default {
       axiosGet("stockPredictions").then((response) => {
         predictionsData.value = response.spProducts;
         productCats.value = response.productCats;
+        upProducts.value = response.trendingBelow;
       });
     });
 
@@ -156,6 +182,8 @@ export default {
       setFilter,
       selectedCat,
       filterCat,
+      viewType,
+      upProducts,
     };
   },
 };
@@ -217,7 +245,24 @@ export default {
   width: 100%;
 }
 
+#productsBtn {
+  position: relative;
+  top: 65%;
+}
+
+#predictionsBtn {
+  position: relative;
+  top: 65%;
+}
+
 #keyInput {
   margin-right: 5px;
+}
+
+#uppDiv {
+  position: absolute;
+  width: 99%;
+  height: 80%;
+  top: 15%;
 }
 </style>

@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die;
 }
 
-// $_GET['productInfo?key'] = 'acc';
+// $_GET['stockPredictions'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -561,6 +561,7 @@ if (isset($_GET['productInfo?key'])) {
     $productInfo = $db->query($sql);
     $productInfo = $productInfo->fetchAll(PDO::FETCH_ASSOC);
 
+    // Convert into actual unit of the product
     $productInfo[0]['unit'] = $unitLookup[$productInfo[0]['unit']];
 
     $greaterThan6Month = strtotime('-6 months');
@@ -757,7 +758,9 @@ if (isset($_GET['productInfo?key'])) {
         $dayCount++;
 
         if ($dayCount == 7) {
-            $tmp[$j] = ceil($weekSales * 1.1);
+            $endDateRange = date('M-d', strtotime($date));
+            $startDateRange = date('M-d', strtotime($date . '- 6 days'));
+            $tmp[$startDateRange . '-' . $endDateRange] = ceil($weekSales * 1.1);
             $dayCount = 0;
             $weekSales = 0;
             $j++;
@@ -784,14 +787,14 @@ if (isset($_GET['productInfo?key'])) {
     $thisYearStockChange = $tmp;
 
     // Dodgy method for making array of headers for the graph, since it needs a corresponding header index for each data point
-    $keyStockChangeColumns = array_combine(array_keys($keyStockChange), array_fill(0, count($keyStockChange), ''));
-    $monthNum = 1;
-    for ($i = 4; $i < 52; $i += 4) {
-        $monthTitle = DateTime::createFromFormat('!m', $monthNum);
-        $monthTitle = $monthTitle->format('F');
-        $keyStockChangeColumns[$i] = $monthTitle;
-        $monthNum++;
-    }
+    // $keyStockChangeColumns = array_combine(array_keys($keyStockChange), array_fill(0, count($keyStockChange), ''));
+    // $monthNum = 1;
+    // for ($i = 4; $i < 52; $i += 4) {
+    //     $monthTitle = DateTime::createFromFormat('!m', $monthNum);
+    //     $monthTitle = $monthTitle->format('F');
+    //     $keyStockChangeColumns[$i] = $monthTitle;
+    //     $monthNum++;
+    // }
 
     $yearQuarters = [];
     for ($i = 0; $i < 12; $i += 3) {
@@ -809,7 +812,6 @@ if (isset($_GET['productInfo?key'])) {
         'totalSalesPastWeek' => number_format($totalSalesPastWeek, 2),
         'yearPredictions' => $yearPredictions,
         'keyStockChange' => $keyStockChange,
-        'keyStockColumns' => $keyStockChangeColumns,
         'thisYearSales' => $thisYearStockChange,
         'rolling30DaySales' => $rolling30Days,
         'totalSalesYearPrediction' => [
@@ -987,16 +989,27 @@ if (isset($_GET['stockPredictions'])) {
     $spChange = $db->query($sql);
     $spChange = $spChange->fetchAll(PDO::FETCH_ASSOC);
 
+    $startOfThisYear = date("Ymd", strtotime('first day of january this year'));
+    $mostRecentDay = date("Ymd", strtotime('- 1 day'));
+
+    $sql = "SELECT * FROM stock_change WHERE date >= $startOfThisYear AND date <= $mostRecentDay ORDER BY date ASC";
+    $spChangeCurrent  = $db->query($sql);
+    $spChangeCurrent = $spChangeCurrent->fetchAll(PDO::FETCH_ASSOC);
+
+    // Format stock change for previous year
     $tmp = [];
     foreach ($spChange as $index => $rec) {
         $tmp[$rec['key']][$rec['date']] = $rec['qty'];
     }
     $spChange = $tmp;
 
+    // Change from qty on each day to sales on each day
     $tmp = [];
     foreach ($spChange as $key => $sales) {
         foreach ($sales as $date => $qty) {
-            if (end($sales) != $qty) {
+            $lastKey = key(array_slice($sales, -1, 1, true));
+
+            if ($date != $lastKey) {
                 $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
                 $nextDate = $nextDate->format("Ymd");
                 $tmp[$key][$date] = $qty - $sales[$nextDate];
@@ -1004,6 +1017,28 @@ if (isset($_GET['stockPredictions'])) {
         }
     }
     $spChange = $tmp;
+
+    // Format stock change for current year
+    $tmp = [];
+    foreach ($spChangeCurrent as $index => $rec) {
+        $tmp[$rec['key']][$rec['date']] = $rec['qty'];
+    }
+    $spChangeCurrent = $tmp;
+
+    // Change from qty on each day to sales on each day
+    $tmp = [];
+    foreach ($spChangeCurrent as $key => $sales) {
+        foreach ($sales as $date => $qty) {
+            $lastKey = key(array_slice($sales, -1, 1, true));
+
+            if ($date != $lastKey) {
+                $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
+                $nextDate = $nextDate->format('Ymd');
+                $tmp[$key][$date] = $qty - $sales[$nextDate];
+            }
+        }
+    }
+    $spChangeCurrent = $tmp;
 
     $yearPredictions = [];
     $yearQuarters = [];
@@ -1047,9 +1082,90 @@ if (isset($_GET['stockPredictions'])) {
 
     $productCats = array_keys($spProducts);
 
+    // Get products currently trending below predicited sales
+    $tmp = [];
+    $j = 1;
+    $weekSales = 0;
+    $dayCount = 0;
+    foreach ($spChange as $key => $sales) {
+        foreach ($sales as $date => $sale) {
+            $weekSales += $sale;
+            $dayCount++;
+
+            if ($dayCount == 7) {
+                $tmp[$key][$j] = ceil($weekSales * 1.1);
+                $dayCount = 0;
+                $weekSales = 0;
+                $j++;
+            }
+        }
+        $j = 1;
+        $dayCount = 0;
+        $weekSales = 0;
+    }
+    $spChange = $tmp;
+
+    // Do the same for the stock change for the current year
+    $tmp = [];
+    $j = 1;
+    $weekSales = 0;
+    $dayCount = 0;
+    foreach ($spChangeCurrent as $key => $sales) {
+        foreach ($sales as $date => $sale) {
+            $weekSales += $sale;
+            $dayCount++;
+
+            if ($dayCount == 7) {
+                $tmp[$key][$j] = ceil($weekSales);
+                $dayCount = 0;
+                $weekSales = 0;
+                $j++;
+            }
+        }
+        $j = 1;
+        $weekSales = 0;
+        $dayCount = 0;
+    }
+    $spChangeCurrent = $tmp;
+
+    $sql = "SELECT products.key as Key, products.product as Product, stock.qty as Qty, products.primary_supplier as Supplier, products.outOfStock as 'Out Of Stock' 
+            FROM products
+            LEFT JOIN stock ON (products.key = stock.key)";
+    $productInfo = $db->query($sql);
+    $productInfo = $productInfo->fetchAll(PDO::FETCH_ASSOC);
+
+    $tmp = [];
+    foreach ($productInfo as $index => $product) {
+        $tmp[$product['Key']] = $product;
+    }
+    $productInfo = $tmp;
+
+    // Get the last week periods for previous and current year and compare them to find 
+    // products that are trending below the predicted sales
+    $trendingBelow = [];
+    foreach ($spChangeCurrent as $key => $sales) {
+        // Get 2 most recent weeks of sales to compare against the predicited sales
+        $currentWeek1 = array_slice($sales, -1, 1, true);
+        $currentWeek2 = array_slice($sales, -2, 1, true);
+
+        // If the data exists to compare the current and previous years, and the key has been trending below for 2 weeks add to trendingBelow array
+        if (isset($spChange[$key][key($currentWeek1)]) && isset($spChange[$key][key($currentWeek2)])) {
+            $predictedSalesWeek1 = $spChange[$key][key($currentWeek1)];
+            $currentSalesWeek1 = $sales[key($currentWeek1)];
+
+            $predictedSalesWeek2 = $spChange[$key][key($currentWeek2)];
+            $currentSalesWeek2 = $sales[key($currentWeek2)];
+
+            if (($currentSalesWeek1 < $predictedSalesWeek1) && ($currentSalesWeek2 < $predictedSalesWeek2)) {
+                $trendingBelow[] = $productInfo[$key];
+            }
+        }
+    }
+
     $response = [
         'spProducts' => $spProducts,
         'productCats' => $productCats,
+        'trendingBelow' => $trendingBelow,
     ];
 
     echo json_encode($response, JSON_PRETTY_PRINT);

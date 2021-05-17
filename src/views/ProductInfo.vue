@@ -104,7 +104,7 @@
     </div>
 
     <div v-show="viewType === 'stockStats'">
-      <h3 style="position: absolute; left: 72.5%; top: 63%;">
+      <h3 style="position: absolute; left: 72.5%; top: 59%;">
         Rolling 30 Day Sales <span style="color:red;">|</span> Total:
         {{ rolling30Total }}
       </h3>
@@ -250,21 +250,7 @@ export default {
             id: "Year Predictions Chart",
           },
           xaxis: {
-            // categories: [
-            //   "January",
-            //   "February",
-            //   "March",
-            //   "April",
-            //   "May",
-            //   "June",
-            //   "July",
-            //   "August",
-            //   "September",
-            //   "October",
-            //   "November",
-            //   "December",
-            // ],
-            categories: Object.values(response.keyStockColumns),
+            categories: Object.keys(response.keyStockChange),
           },
         };
 
