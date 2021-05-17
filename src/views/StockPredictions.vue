@@ -64,7 +64,7 @@
 
   <div id="uppDiv" v-show="viewType === 'viewProducts'">
     <PredictionsTable
-      :tableColumns="Object.keys(upProducts[0])"
+      :tableColumns="upProductsColumns"
       :tableData="upProducts"
     ></PredictionsTable>
   </div>
@@ -116,6 +116,7 @@ export default {
     const filterProductInput = ref("");
     const viewType = ref("viewPredictions");
     const upProducts = ref([]);
+    const upProductsColumns = ref([]);
 
     const filterCat = computed(() => {
       if (!selectedCat.value || selectedCat.value == "Select Category") {
@@ -168,6 +169,7 @@ export default {
         predictionsData.value = response.spProducts;
         productCats.value = response.productCats;
         upProducts.value = response.trendingBelow;
+        upProductsColumns.value = Object.keys(upProducts.value[0]);
       });
     });
 
@@ -184,6 +186,7 @@ export default {
       filterCat,
       viewType,
       upProducts,
+      upProductsColumns,
     };
   },
 };
