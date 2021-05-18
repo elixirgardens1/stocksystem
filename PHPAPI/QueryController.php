@@ -1148,28 +1148,44 @@ if (isset($_GET['stockPredictions'])) {
 
             if (($currentSalesWeek1 < $predictedSalesWeek1) && ($currentSalesWeek2 < $predictedSalesWeek2)) {
                 // Calculate percentage decrease between the predicted sales and the current sales
-                $percentageDecrease = 0;
+                $percentageDecreaseWeek1 = 0;
+                $percentageDecreaseWeek2 = 0;
+
                 if ($currentSalesWeek1 != 0) {
-                    $percentageDecrease = abs(number_format((($currentSalesWeek1 - $predictedSalesWeek1) / $predictedSalesWeek1) * 100, 2));
+                    $percentageDecreaseWeek1 = abs(number_format((($currentSalesWeek1 - $predictedSalesWeek1) / $predictedSalesWeek1) * 100, 2));
+                }
+
+                if ($currentSalesWeek2 != 0) {
+                    $percentageDecreaseWeek2 = abs(number_format((($currentSalesWeek2 - $predictedSalesWeek2) / $predictedSalesWeek2) * 100, 2));
                 }
 
                 // If decrease between current and predicted is greater than 10%
-                if ($percentageDecrease > 10) {
+                if ($percentageDecreaseWeek1 > 10 && $percentageDecreaseWeek2 > 10) {
                     $trendingBelow[$key] = $productInfo[$key];
 
-                    // Change this to be more use friendly value
+                    // Change this to be more user friendly value
                     if ($trendingBelow[$key]['Out Of Stock'] == 1) {
                         $trendingBelow[$key]['Out Of Stock'] = true;
                     }
 
-                    $trendingBelow[$key]['Percent Decrease (%)'] = isset($percentageDecrease) ? $percentageDecrease : 0;
+                    $trendingBelow[$key]['Week2 Decrease (%)'] = isset($percentageDecreaseWeek2) ? $percentageDecreaseWeek2 : 0;
+                    $trendingBelow[$key]['Week1 Decrease (%)'] = isset($percentageDecreaseWeek1) ? $percentageDecreaseWeek1 : 0;
+                } else {
+                    $trendingBelow[$key] = $productInfo[$key];
+
+                    if ($trendingBelow[$key]['Out Of Stock'] == 1) {
+                        $trendingBelow[$key]['Out Of Stock'] = true;
+                    }
+
+                    $trendingBelow[$key]['Week2 Decrease (%)'] = 0;
+                    $trendingBelow[$key]['Week1 Decrease (%)'] = 0;
                 }
             }
         }
     }
 
     usort($trendingBelow, function ($a, $b) {
-        return $a['Percent Decrease (%)'] - $b['Percent Decrease (%)'];
+        return $a['Qty'] - $b['Qty'];
     });
 
     $response = [

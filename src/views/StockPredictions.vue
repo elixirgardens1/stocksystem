@@ -72,6 +72,7 @@
     <PredictionsTable
       :tableColumns="upProductsColumns"
       :tableData="upProducts"
+      @filter-column="filterUpp"
     ></PredictionsTable>
   </div>
 
@@ -166,9 +167,21 @@ export default {
       return filtered;
     });
 
+    // Set filters for predictions table, which will trigger computed properties
     const setFilter = (column, type) => {
       filterColumn.value = column;
       filterType.value = type;
+    };
+
+    // Filter under performing products table
+    const filterUpp = (column, type) => {
+      if (type === "Desc") {
+        return upProducts.value.sort((a, b) => a[column] - b[column]);
+      } else if (type === "Asc") {
+        return upProducts.value.sort((a, b) => b[column] - a[column]);
+      } else {
+        return upProducts.value.sort((a, b) => a["Qty"] - b["Qty"]);
+      }
     };
 
     onMounted(() => {
@@ -201,6 +214,7 @@ export default {
       upProducts,
       upProductsColumns,
       upProductCount,
+      filterUpp,
     };
   },
 };
@@ -280,6 +294,6 @@ export default {
   position: absolute;
   width: 99%;
   height: 80%;
-  top: 10.5%;
+  top: 11%;
 }
 </style>

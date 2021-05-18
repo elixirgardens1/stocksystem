@@ -67,7 +67,7 @@ export default {
         classList = event.explicitOriginalTarget.classList;
       }
 
-      // If a new column has been click to be filtered, remove css class from other headers
+      // If a new column has been clicked to be filtered, remove css class from other headers
       if (elementText !== this.selectedColumn) {
         document
           .querySelectorAll(".activeDesc")
@@ -88,6 +88,7 @@ export default {
 
         this.filterType = "Desc";
       }
+
       // Else if header already has the desc class, append the asc class
       else if (classList.value === "activeDesc") {
         if (browser === "Chrome") {
@@ -98,6 +99,7 @@ export default {
 
         this.filterType = "Asc";
       }
+
       // Else remove all classes form the header, indicating there is no filtering on this table column
       else {
         if (browser === "Chrome") {
