@@ -63,6 +63,12 @@
   </div>
 
   <div id="uppDiv" v-show="viewType === 'viewProducts'">
+    <h3>Under Performing Products</h3>
+    <h4 style="text-align: center;">Product Count: {{ upProductCount }}</h4>
+    <h5 style="text-align: center;">
+      Products Ordered By Percentage Decrease From The Predicted Sales Based On
+      Previous Year
+    </h5>
     <PredictionsTable
       :tableColumns="upProductsColumns"
       :tableData="upProducts"
@@ -117,6 +123,7 @@ export default {
     const viewType = ref("viewPredictions");
     const upProducts = ref([]);
     const upProductsColumns = ref([]);
+    const upProductCount = ref(0);
 
     const filterCat = computed(() => {
       if (!selectedCat.value || selectedCat.value == "Select Category") {
@@ -170,12 +177,12 @@ export default {
         productCats.value = response.productCats;
         upProducts.value = response.trendingBelow;
 
-        console.log(response);
-
         let firstProductKey = Object.keys(upProducts.value)[0];
         upProductsColumns.value = Object.keys(
           upProducts.value[firstProductKey]
         );
+
+        upProductCount.value = Object.keys(upProducts.value).length;
       });
     });
 
@@ -193,6 +200,7 @@ export default {
       viewType,
       upProducts,
       upProductsColumns,
+      upProductCount,
     };
   },
 };
@@ -272,6 +280,6 @@ export default {
   position: absolute;
   width: 99%;
   height: 80%;
-  top: 15%;
+  top: 10.5%;
 }
 </style>

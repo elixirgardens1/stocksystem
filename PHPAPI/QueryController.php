@@ -642,7 +642,7 @@ if (isset($_GET['productInfo?key'])) {
         if ($date != $lastDay) {
             $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
             $nextDate = $nextDate->format('Ymd');
-            $tmp[$date] = $qty - $keyStockChange[$nextDate];
+            $tmp[$date] = round($qty - $keyStockChange[$nextDate]);
         }
     }
     $keyStockChange = $tmp;
@@ -656,7 +656,7 @@ if (isset($_GET['productInfo?key'])) {
         if ($date != $lastDay) {
             $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
             $nextDate = $nextDate->format('Ymd');
-            $tmp[$date] = $qty - $thisYearStockChange[$nextDate];
+            $tmp[$date] = round($qty - $thisYearStockChange[$nextDate]);
         }
     }
     $thisYearStockChange = $tmp;
@@ -673,7 +673,7 @@ if (isset($_GET['productInfo?key'])) {
 
             $date = DateTime::createFromFormat('Ymd', $date - 1);
             $date = $date->format('M-d');
-            $tmp[$date] = $qty - $rolling30Days[$nextDate];
+            $tmp[$date] = round($qty - $rolling30Days[$nextDate]);
         }
     }
     $rolling30Days = $tmp;
@@ -695,7 +695,7 @@ if (isset($_GET['productInfo?key'])) {
         if ($date != $lastDay) {
             $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
             $nextDate = $nextDate->format('Ymd');
-            $tmp[$date +  1] = $qty - $salesPastWeek[$nextDate];
+            $tmp[$date +  1] = round($qty - $salesPastWeek[$nextDate]);
         }
     }
     $salesPastWeek = $tmp;
@@ -778,7 +778,7 @@ if (isset($_GET['productInfo?key'])) {
         $dayCount++;
 
         if ($dayCount == 7) {
-            $tmp[$j] = $weekSales;
+            $tmp[$j] = round($weekSales);
             $dayCount = 0;
             $weekSales = 0;
             $j++;
@@ -1148,16 +1148,29 @@ if (isset($_GET['stockPredictions'])) {
 
             if (($currentSalesWeek1 < $predictedSalesWeek1) && ($currentSalesWeek2 < $predictedSalesWeek2)) {
                 // Calculate percentage decrease between the predicted sales and the current sales
-                $percentageDifference = 0;
+                $percentageDecrease = 0;
                 if ($currentSalesWeek1 != 0) {
-                    $percentageDifference = abs(number_format((($currentSalesWeek1 - $predictedSalesWeek1) / $predictedSalesWeek1) * 100, 2));
+                    $percentageDecrease = abs(number_format((($currentSalesWeek1 - $predictedSalesWeek1) / $predictedSalesWeek1) * 100, 2));
                 }
 
-                $trendingBelow[$key] = $productInfo[$key];
-                $trendingBelow[$key]['Percent Difference'] = isset($percentageDifference) ? $percentageDifference : 0;
+                // If decrease between current and predicted is greater than 10%
+                if ($percentageDecrease > 10) {
+                    $trendingBelow[$key] = $productInfo[$key];
+
+                    // Change this to be more use friendly value
+                    if ($trendingBelow[$key]['Out Of Stock'] == 1) {
+                        $trendingBelow[$key]['Out Of Stock'] = true;
+                    }
+
+                    $trendingBelow[$key]['Percent Decrease (%)'] = isset($percentageDecrease) ? $percentageDecrease : 0;
+                }
             }
         }
     }
+
+    usort($trendingBelow, function ($a, $b) {
+        return $a['Percent Decrease (%)'] - $b['Percent Decrease (%)'];
+    });
 
     $response = [
         'spProducts' => $spProducts,
