@@ -51,8 +51,24 @@ export default {
   },
   methods: {
     columnFilter: function(event) {
-      // If the selected column changes remove the filter arrows from the other column
-      if (event.explicitOriginalTarget.textContent !== this.selectedColumn) {
+      // Will depend on browser
+      let elementText = "";
+      let browser = "";
+      let classList = [];
+
+      // Check which browser the user is on
+      if (navigator.userAgent.indexOf("Chrome") !== -1) {
+        elementText = event.srcElement.innerText;
+        browser = "Chrome";
+        classList = event.srcElement.classList;
+      } else {
+        elementText = event.explicitOriginalTarget.textContent;
+        browser = "Mozilla";
+        classList = event.explicitOriginalTarget.classList;
+      }
+
+      // If a new column has been click to be filtered, remove css class from other headers
+      if (elementText !== this.selectedColumn) {
         document
           .querySelectorAll(".activeDesc")
           .forEach((el) => el.classList.remove("activeDesc"));
@@ -62,21 +78,39 @@ export default {
           .forEach((el) => el.classList.remove("activeAsc"));
       }
 
-      // Add class depending on the values currently in the classList, if none add desc arrow, if desc arrow add asc arrow, if asc arrow reset class
-      if (event.explicitOriginalTarget.classList.length === 0) {
-        event.explicitOriginalTarget.classList = "activeDesc";
+      // If no classes have been appended, append desc arrow to header
+      if (classList.length === 0) {
+        if (browser === "Chrome") {
+          event.srcElement.classList = "activeDesc";
+        } else {
+          event.explicitOriginalTarget.classList = "activeDesc";
+        }
+
         this.filterType = "Desc";
-      } else if (
-        event.explicitOriginalTarget.classList.value === "activeDesc"
-      ) {
-        event.explicitOriginalTarget.classList = "activeAsc";
+      }
+      // Else if header already has the desc class, append the asc class
+      else if (classList.value === "activeDesc") {
+        if (browser === "Chrome") {
+          event.srcElement.classList = "activeAsc";
+        } else {
+          event.explicitOriginalTarget.classList = "activeAsc";
+        }
+
         this.filterType = "Asc";
-      } else {
-        event.explicitOriginalTarget.classList = [];
+      }
+      // Else remove all classes form the header, indicating there is no filtering on this table column
+      else {
+        if (browser === "Chrome") {
+          event.srcElement.classList = [];
+        } else {
+          event.explicitOriginalTarget.classList = [];
+        }
+
         this.filterType = "";
       }
 
-      this.selectedColumn = event.explicitOriginalTarget.textContent;
+      // Return the filter type and column to the parent view
+      this.selectedColumn = elementText;
       this.$emit("filter-column", this.selectedColumn, this.filterType);
     },
   },
@@ -143,11 +177,13 @@ th:hover {
 .activeDesc:after {
   color: #5bf;
   content: " \25bc";
+  font-family: "Segoe UI Symbol";
 }
 
 .activeAsc:after {
   color: #5bf;
   content: " \25b2";
+  font-family: "Segoe UI Symbol";
 }
 
 .table-scroll td {
