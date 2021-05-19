@@ -1153,11 +1153,11 @@ if (isset($_GET['stockPredictions'])) {
                 $percentageDecreaseWeek2 = 0;
 
                 if ($currentSalesWeek1 != 0) {
-                    $percentageDecreaseWeek1 = abs(number_format((($currentSalesWeek1 - $predictedSalesWeek1) / $predictedSalesWeek1) * 100, 2));
+                    $percentageDecreaseWeek1 = number_format((($currentSalesWeek1 - $predictedSalesWeek1) / $predictedSalesWeek1) * 100, 2);
                 }
 
                 if ($currentSalesWeek2 != 0) {
-                    $percentageDecreaseWeek2 = abs(number_format((($currentSalesWeek2 - $predictedSalesWeek2) / $predictedSalesWeek2) * 100, 2));
+                    $percentageDecreaseWeek2 = number_format((($currentSalesWeek2 - $predictedSalesWeek2) / $predictedSalesWeek2) * 100, 2);
                 }
 
                 // If decrease between current and predicted is greater than 10%
@@ -1345,8 +1345,67 @@ if (isset($_GET['skuStats?key'])) {
     }
     $skuPlatformSales = $tmp;
 
+    // Calcuate the decrease/increase in sales over the weeks
+    foreach ($skuPlatformSales as $sku => $platforms) {
+         // Total the sales across the platforms for each of the weeks
+        $skuPlatformSales[$sku]['Total Week 1'] = array_sum(array_column($platforms, 'week1'));
+        $skuPlatformSales[$sku]['Total Week 2'] = array_sum(array_column($platforms, 'week2'));
+        $skuPlatformSales[$sku]['Total Week 3'] = array_sum(array_column($platforms, 'week3'));
+        $skuPlatformSales[$sku]['Total Week 4'] = array_sum(array_column($platforms, 'week4'));
+
+        // Total for all platforms for the weeks
+        $skuPlatformSales[$sku]['4 Week Total'] = array_sum($skuPlatformSales[$sku]);
+
+        // Percentage change between the weeks
+        $skuPlatformSales[$sku]['PC Week4-3'] = null;
+        if (isset($skuPlatformSales[$sku]['Total Week 4']) && isset($skuPlatformSales[$sku]['Total Week 3'])) {
+            $skuPlatformSales[$sku]['PC Week4-3'] = number_format((($skuPlatformSales[$sku]['Total Week 3'] - $skuPlatformSales[$sku]['Total Week 4']) / $skuPlatformSales[$sku]['Total Week 4']) * 100, 2);
+        }
+
+        $skuPlatformSales[$sku]['PC Week3-2'] = null;
+        if (isset($skuPlatformSales[$sku]['Total Week 3']) && isset($skuPlatformSales[$sku]['Total Week 2'])) {
+            $skuPlatformSales[$sku]['PC Week3-2'] = number_format((($skuPlatformSales[$sku]['Total Week 2'] - $skuPlatformSales[$sku]['Total Week 3']) / $skuPlatformSales[$sku]['Total Week 3']) * 100, 2);
+        }
+
+        $skuPlatformSales[$sku]['PC Week2-1'] = null;
+        if (isset($skuPlatformSales[$sku]['Total Week 2']) && isset($skuPlatformSales[$sku]['Total Week 1'])) {
+            $skuPlatformSales[$sku]['PC Week2-1'] = number_format((($skuPlatformSales[$sku]['Total Week 1'] - $skuPlatformSales[$sku]['Total Week 2']) / $skuPlatformSales[$sku]['Total Week 2']) * 100, 2);
+        }
+    }
+
     /// DEBUG
     echo '<pre style="background: black;  color: white;">'; print_r($skuPlatformSales); echo '</pre>'; die();
+
+    // CHANGE FORMAT BELOW FRO CSV AND MAKE TEMPLATE FOR CSV
+
+    // Format for csv export from stock control
+    $tmp = [];
+    foreach ($skuPlatformSales as $sku => $stats) {
+
+        $tmp[] = [
+            'Sku' => $sku,
+            'Amazon Week 1' => isset($stats['amazon']['week1']) ? $stats['amazon']['week1'] : 0,
+            'Amazon Week 2' => isset($stats['amazon']['week2']) ? $stats['amazon']['week2'] : 0,
+            'Amazon Week 3' => isset($stats['amazon']['week3']) ? $stats['amazon']['week3'] : 0,
+            'Amazon Week 4' => isset($stats['amazon']['week4']) ? $stats['amazon']['week4'] : 0,
+            'Ebay Week 1' => isset($stats['ebay']['week1']) ? $stats['ebay']['week1'] : 0,
+            'Ebay Week 2' => isset($stats['ebay']['week2']) ? $stats['ebay']['week2'] : 0,
+            'Ebay Week 3' => isset($stats['ebay']['week3']) ? $stats['ebay']['week3'] : 0,
+            'Ebay Week 4' => isset($stats['ebay']['week4']) ? $stats['ebay']['week4'] : 0,
+            'Website Week 1' => isset($stats['website']['week1']) ? $stats['website']['week1'] : 0,
+            'Website Week 2' => isset($stats['website']['week2']) ? $stats['website']['week2'] : 0,
+            'Website Week 3' => isset($stats['website']['week3']) ? $stats['website']['week3'] : 0,
+            'Website Week 4' => isset($stats['website']['week4']) ? $stats['website']['week4'] : 0,
+            'Onbuy Week 1' => isset($stats['onbuy']['week1']) ? $stats['onbuy']['week1'] : 0,
+            'Onbuy Week 2' => isset($stats['onbuy']['week2']) ? $stats['onbuy']['week2'] : 0,
+            'Onbuy Week 3' => isset($stats['onbuy']['week3']) ? $stats['onbuy']['week3'] : 0,
+            'Onbuy Week 4' => isset($stats['onbuy']['week4']) ? $stats['onbuy']['week4'] : 0,
+            'Total Week 1' => isset($stats),
+        ];
+    }
+    $skuPlatformSales = $tmp;
+
+    echo json_encode($skuPlatformSales, JSON_PRETTY_PRINT);
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------

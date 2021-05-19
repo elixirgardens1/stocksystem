@@ -73,6 +73,7 @@
       :tableColumns="upProductsColumns"
       :tableData="upProducts"
       @filter-column="filterUpp"
+      @export-sku-stats="skusStats"
     ></PredictionsTable>
   </div>
 
@@ -85,6 +86,7 @@
 import PredictionsTable from "@/components/PredictionsTable.vue";
 import { computed, onMounted, reactive, ref } from "@vue/runtime-core";
 import { axiosGet } from "@/composables/axiosGet.js";
+import { exportCsv } from "@/composables/exportCsv.js";
 
 export default {
   name: "StockPredictions",
@@ -184,6 +186,32 @@ export default {
       }
     };
 
+    const skusStats = (key) => {
+        axiosGet(`skuStats?key=${key}`).then((response) => {
+            downloadCsv(response, `${key}SkuStats`)
+        });
+    };
+
+    const downloadCsv = (exportData, name) => {
+      if (!Object.keys(exportData).length) {
+        return alert("No Results Found, Can't Export Csv");
+      }
+
+      const csv = exportCsv(exportData);
+      if (csv === "Not Valid Format") return alert(csv);
+
+      let link = document.createElement("a");
+      link.id = "download-csv";
+      link.setAttribute(
+        "href",
+        "data:text/plain;charset=utf-8," + encodeURIComponent(csv)
+      );
+      link.setAttribute("download", `${name}.csv`);
+      document.body.appendChild(link);
+      document.querySelector("#download-csv").click();
+      document.body.removeChild(link);
+    };
+
     onMounted(() => {
       axiosGet("stockPredictions").then((response) => {
         predictionsData.value = response.spProducts;
@@ -215,6 +243,7 @@ export default {
       upProductsColumns,
       upProductCount,
       filterUpp,
+      skusStats,
     };
   },
 };
