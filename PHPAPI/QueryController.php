@@ -8,21 +8,22 @@ ini_set('memory_limit', '1024M');
  * @author: Ryan Denby
  */
 
-header('access-control-allow-origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
+// header('access-control-allow-origin: *');
+// header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+// header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header('HTTP/1.1 204 No Content');
-    die;
-}
+// if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+//     header('HTTP/1.1 204 No Content');
+//     die;
+// }
 
-// $_GET['stockPredictions'] = 'acc';
+$_GET['skuStats?key'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // Define connection to stock control database
 $db = new PDO('sqlite:stock_control.db3');
+$dbPB = new PDO('sqlite:main.db3');
 
 // Define units lookup
 $unitLookup = [
@@ -1170,6 +1171,7 @@ if (isset($_GET['stockPredictions'])) {
 
                     $trendingBelow[$key]['Week2 Decrease (%)'] = isset($percentageDecreaseWeek2) ? $percentageDecreaseWeek2 : 0;
                     $trendingBelow[$key]['Week1 Decrease (%)'] = isset($percentageDecreaseWeek1) ? $percentageDecreaseWeek1 : 0;
+                    $trendingBelow[$key]['Actions'] = null;
                 } else {
                     $trendingBelow[$key] = $productInfo[$key];
 
@@ -1179,6 +1181,7 @@ if (isset($_GET['stockPredictions'])) {
 
                     $trendingBelow[$key]['Week2 Decrease (%)'] = 0;
                     $trendingBelow[$key]['Week1 Decrease (%)'] = 0;
+                    $trendingBelow[$key]['Actions'] = null;
                 }
             }
         }
@@ -1242,6 +1245,108 @@ if (isset($_GET['noShelfCsv'])) {
     $noShelfPP = $tmp;
 
     echo json_encode($noShelfPP, JSON_PRETTY_PRINT);
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+if (isset($_GET['skuStats?key'])) {
+    $key = $_GET['skuStats?key'];
+    $key = 'fer3';
+
+    // Get the skus we need to collect sales data for
+    $sql = "SELECT sku, _rowid_ FROM sku_atts WHERE atts LIKE '%$key%'";
+    $keySkus = $db->query($sql);
+    $keySkus = $keySkus->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // get 4 7 days weeks worth of sales
+    $monthAgo = date('Y-m-d H:i', strtotime('- 28 days 00:00'));
+
+    // Create array of dates from start of year to current date
+    $weekArr = [];
+    $start = new DateTime(date("Ymd", strtotime('first day of january')));
+    $end = new DateTime(date("Ymd", strtotime('now')));
+    $interval = new DateInterval('P1D');
+    $period = new DatePeriod($start, $interval, $end);
+
+    foreach ($period  as $dt) {
+        $weekArr[] = $dt->format('Ymd');
+    }
+
+    // Get Start and end of each week period, from start of year, we will only use the past 4 weeks
+    $tmp = [];
+    $j = 1;
+    $dayCount = 0;
+    foreach ($weekArr as $index => $date) {
+        $weekDays[] = $date;
+        $dayCount++;
+
+        if ($dayCount == 7) {
+            $tmp[$j] = [
+                'start' => $weekDays[0],
+                'end' => $weekDays[6],
+            ];
+            $j++;
+            $dayCount = 0;
+            $weekDays = [];
+        }
+    }
+    // Most recent weeks the graphs on the productInfo pages are using
+    $weekArr = array_splice($tmp, -4, 4);
+
+    // Foreach of the skus, get the sales stats for the past week, this should be split into platforms
+    $sql = "SELECT sku, qty, source, purchase_date FROM products WHERE purchase_date >= '$monthAgo'";
+    $skuPlatformSales = $dbPB->query($sql);
+    $skuPlatformSales = $skuPlatformSales->fetchAll(PDO::FETCH_ASSOC);
+
+    // Total sales for each week for each platform
+    $tmp = [];
+    foreach ($skuPlatformSales as $index => $rec) {
+        if (isset($keySkus[$rec['sku']])) {
+            $date = date('Ymd', strtotime($rec['purchase_date']));
+
+            // Test date to see which week the sale belongs to and increment the sales count if the array position is set
+            switch ($date) {
+            case ($date >= $weekArr[0]['start'] && $date <= $weekArr[0]['end']):
+                if (!isset($tmp[$rec['sku']][$rec['source']]['week1'])) {
+                    $tmp[$rec['sku']][$rec['source']]['week1'] = $rec['qty'];
+                } else {
+                    $tmp[$rec['sku']][$rec['source']]['week1'] += $rec['qty'];
+                }
+                break;
+
+            case ($date >= $weekArr[1]['start'] && $date <= $weekArr[1]['end']):
+                if (!isset($tmp[$rec['sku']][$rec['source']]['week2'])) {
+                    $tmp[$rec['sku']][$rec['source']]['week2'] = $rec['qty'];
+                } else {
+                    $tmp[$rec['sku']][$rec['source']]['week2'] += $rec['qty'];
+                }
+                break;
+
+            case ($date >= $weekArr[2]['start'] && $date <= $weekArr[2]['end']):
+                if (!isset($tmp[$rec['sku']][$rec['source']]['week3'])) {
+                    $tmp[$rec['sku']][$rec['source']]['week3'] = $rec['qty'];
+                } else {
+                    $tmp[$rec['sku']][$rec['source']]['week3'] += $rec['qty'];
+                }
+                break;
+
+            case ($date >= $weekArr[3]['start'] && $date <= $weekArr[3]['end']):
+                if (!isset($tmp[$rec['sku']][$rec['source']]['week4'])) {
+                    $tmp[$rec['sku']][$rec['source']]['week4'] = $rec['qty'];
+                } else {
+                    $tmp[$rec['sku']][$rec['source']]['week4'] += $rec['qty'];
+                }
+                break;
+
+            default:
+                break;
+            }
+        }
+    }
+    $skuPlatformSales = $tmp;
+
+    /// DEBUG
+    echo '<pre style="background: black;  color: white;">'; print_r($skuPlatformSales); echo '</pre>'; die();
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
