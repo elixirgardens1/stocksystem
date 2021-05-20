@@ -8,16 +8,16 @@ ini_set('memory_limit', '1024M');
  * @author: Ryan Denby
  */
 
-// header('access-control-allow-origin: *');
-// header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
-// header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
+header('access-control-allow-origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
 
-// if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-//     header('HTTP/1.1 204 No Content');
-//     die;
-// }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    header('HTTP/1.1 204 No Content');
+    die;
+}
 
-$_GET['skuStats?key'] = 'acc';
+// $_GET['skuStats?key'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1251,159 +1251,160 @@ if (isset($_GET['noShelfCsv'])) {
 
 if (isset($_GET['skuStats?key'])) {
     $key = $_GET['skuStats?key'];
-    $key = 'fer3';
 
     // Get the skus we need to collect sales data for
     $sql = "SELECT sku, _rowid_ FROM sku_atts WHERE atts LIKE '%$key%'";
     $keySkus = $db->query($sql);
     $keySkus = $keySkus->fetchAll(PDO::FETCH_KEY_PAIR);
 
-    // get 4 7 days weeks worth of sales
-    $monthAgo = date('Y-m-d H:i', strtotime('- 28 days 00:00'));
+    // Get date for year ago
+    $yearAgo = date('Y-m-d H:i', strtotime('first day of this month 1 year ago 00:00'));
 
     // Create array of dates from start of year to current date
-    $weekArr = [];
-    $start = new DateTime(date("Ymd", strtotime('first day of january')));
+    $monthArr = [];
+    $start = new DateTime(date("Ymd", strtotime($yearAgo)));
     $end = new DateTime(date("Ymd", strtotime('now')));
-    $interval = new DateInterval('P1D');
+    $interval = new DateInterval('P1M');
     $period = new DatePeriod($start, $interval, $end);
 
+    // Get the start and end periods for each of the months in the year period (Rolling)
     foreach ($period  as $dt) {
-        $weekArr[] = $dt->format('Ymd');
+        $monthArr[] = $dt->format('Y-m');
     }
 
-    // Get Start and end of each week period, from start of year, we will only use the past 4 weeks
     $tmp = [];
-    $j = 1;
-    $dayCount = 0;
-    foreach ($weekArr as $index => $date) {
-        $weekDays[] = $date;
-        $dayCount++;
+    foreach ($monthArr as $index => $month) {
+        $tmp[] = [
+          'start' => date('Ymd', strtotime('first day of ' . $month)),
+          'end' => date('Ymd', strtotime('last day of ' . $month)),
+        ];
 
-        if ($dayCount == 7) {
-            $tmp[$j] = [
-                'start' => $weekDays[0],
-                'end' => $weekDays[6],
-            ];
-            $j++;
-            $dayCount = 0;
-            $weekDays = [];
-        }
     }
-    // Most recent weeks the graphs on the productInfo pages are using
-    $weekArr = array_splice($tmp, -4, 4);
+    $monthArr = $tmp;
 
     // Foreach of the skus, get the sales stats for the past week, this should be split into platforms
-    $sql = "SELECT sku, qty, source, purchase_date FROM products WHERE purchase_date >= '$monthAgo'";
+    $sql = "SELECT sku, qty, source, purchase_date FROM products WHERE purchase_date >= '$yearAgo'";
     $skuPlatformSales = $dbPB->query($sql);
     $skuPlatformSales = $skuPlatformSales->fetchAll(PDO::FETCH_ASSOC);
 
-    // Total sales for each week for each platform
+    $skuPlatformSales = array_filter($skuPlatformSales, function ($record) use ($keySkus) {
+        return isset($keySkus[$record['sku']]);
+    });
+
+    // Total sales for each month for each of the platforms
     $tmp = [];
+    $k = 0;
     foreach ($skuPlatformSales as $index => $rec) {
         if (isset($keySkus[$rec['sku']])) {
-            $date = date('Ymd', strtotime($rec['purchase_date']));
+            $yearMonth = date('Ym', strtotime($rec['purchase_date']));
+            // Uppercase the platform name, for the csv later
+            $platform = ucfirst($rec['source']);
 
-            // Test date to see which week the sale belongs to and increment the sales count if the array position is set
-            switch ($date) {
-            case ($date >= $weekArr[0]['start'] && $date <= $weekArr[0]['end']):
-                if (!isset($tmp[$rec['sku']][$rec['source']]['week1'])) {
-                    $tmp[$rec['sku']][$rec['source']]['week1'] = $rec['qty'];
-                } else {
-                    $tmp[$rec['sku']][$rec['source']]['week1'] += $rec['qty'];
-                }
-                break;
-
-            case ($date >= $weekArr[1]['start'] && $date <= $weekArr[1]['end']):
-                if (!isset($tmp[$rec['sku']][$rec['source']]['week2'])) {
-                    $tmp[$rec['sku']][$rec['source']]['week2'] = $rec['qty'];
-                } else {
-                    $tmp[$rec['sku']][$rec['source']]['week2'] += $rec['qty'];
-                }
-                break;
-
-            case ($date >= $weekArr[2]['start'] && $date <= $weekArr[2]['end']):
-                if (!isset($tmp[$rec['sku']][$rec['source']]['week3'])) {
-                    $tmp[$rec['sku']][$rec['source']]['week3'] = $rec['qty'];
-                } else {
-                    $tmp[$rec['sku']][$rec['source']]['week3'] += $rec['qty'];
-                }
-                break;
-
-            case ($date >= $weekArr[3]['start'] && $date <= $weekArr[3]['end']):
-                if (!isset($tmp[$rec['sku']][$rec['source']]['week4'])) {
-                    $tmp[$rec['sku']][$rec['source']]['week4'] = $rec['qty'];
-                } else {
-                    $tmp[$rec['sku']][$rec['source']]['week4'] += $rec['qty'];
-                }
-                break;
-
-            default:
-                break;
+            // If isnt set that set it, else increment the value
+            if (!isset($tmp[$rec['sku']][$platform][$yearMonth])) {
+                $tmp[$rec['sku']][$platform][$yearMonth] = $rec['qty'];
+            } else {
+                $tmp[$rec['sku']][$platform][$yearMonth] += $rec['qty'];
             }
         }
     }
     $skuPlatformSales = $tmp;
 
-    // Calcuate the decrease/increase in sales over the weeks
+    // Calculate the decrease / increase in sales over the rolling year
     foreach ($skuPlatformSales as $sku => $platforms) {
-         // Total the sales across the platforms for each of the weeks
-        $skuPlatformSales[$sku]['Total Week 1'] = array_sum(array_column($platforms, 'week1'));
-        $skuPlatformSales[$sku]['Total Week 2'] = array_sum(array_column($platforms, 'week2'));
-        $skuPlatformSales[$sku]['Total Week 3'] = array_sum(array_column($platforms, 'week3'));
-        $skuPlatformSales[$sku]['Total Week 4'] = array_sum(array_column($platforms, 'week4'));
+        // Total the sales across the platforms for each of the months
+        foreach ($monthArr as $index => $period) {
+            $month = date('Ym', strtotime($period['start']));
 
-        // Total for all platforms for the weeks
-        $skuPlatformSales[$sku]['4 Week Total'] = array_sum($skuPlatformSales[$sku]);
-
-        // Percentage change between the weeks
-        $skuPlatformSales[$sku]['PC Week4-3'] = null;
-        if (isset($skuPlatformSales[$sku]['Total Week 4']) && isset($skuPlatformSales[$sku]['Total Week 3'])) {
-            $skuPlatformSales[$sku]['PC Week4-3'] = number_format((($skuPlatformSales[$sku]['Total Week 3'] - $skuPlatformSales[$sku]['Total Week 4']) / $skuPlatformSales[$sku]['Total Week 4']) * 100, 2);
+            $skuPlatformSales[$sku][$month] = array_sum(array_column($platforms, $month));
         }
 
-        $skuPlatformSales[$sku]['PC Week3-2'] = null;
-        if (isset($skuPlatformSales[$sku]['Total Week 3']) && isset($skuPlatformSales[$sku]['Total Week 2'])) {
-            $skuPlatformSales[$sku]['PC Week3-2'] = number_format((($skuPlatformSales[$sku]['Total Week 2'] - $skuPlatformSales[$sku]['Total Week 3']) / $skuPlatformSales[$sku]['Total Week 3']) * 100, 2);
-        }
+        // Total the sales for all the months across the platforms
+        $skuPlatformSales[$sku]['Year Total'] = array_sum($skuPlatformSales[$sku]);
 
-        $skuPlatformSales[$sku]['PC Week2-1'] = null;
-        if (isset($skuPlatformSales[$sku]['Total Week 2']) && isset($skuPlatformSales[$sku]['Total Week 1'])) {
-            $skuPlatformSales[$sku]['PC Week2-1'] = number_format((($skuPlatformSales[$sku]['Total Week 1'] - $skuPlatformSales[$sku]['Total Week 2']) / $skuPlatformSales[$sku]['Total Week 2']) * 100, 2);
+        // Percentage change between the months
+        foreach ($monthArr as $index => $period) {
+            $month = date('Ym', strtotime($period['start']));
+            // This is the most current month we have data for
+            $lastMonthPeriod = date('Ym', strtotime(end($monthArr)['start']));
+
+            // If not the end of the year period
+            if ($month !== $lastMonthPeriod) {
+                $nextMonth = date('Ym', strtotime($period['start'] . ' + 1 month'));
+
+                // (Next - Current) / Current * 100 to get the percentage change between those two months
+                if (
+                    isset($skuPlatformSales[$sku][$month]) &&
+                    $skuPlatformSales[$sku][$month] !== 0 &&
+                    isset($skuPlatformSales[$sku][$nextMonth]) &&
+                    $skuPlatformSales[$sku][$nextMonth] !== 0
+                ) {
+                    $skuPlatformSales[$sku]['PC '. $month . ' - ' . $nextMonth] = number_format((($skuPlatformSales[$sku][$nextMonth] - $skuPlatformSales[$sku][$month]) / $skuPlatformSales[$sku][$month]) * 100, 2, '.', '');
+                } else {
+                    $skuPlatformSales[$sku]['PC ' . $month . ' - ' . $nextMonth] = null;
+                }
+            }
         }
     }
-
-    /// DEBUG
-    echo '<pre style="background: black;  color: white;">'; print_r($skuPlatformSales); echo '</pre>'; die();
-
-    // CHANGE FORMAT BELOW FRO CSV AND MAKE TEMPLATE FOR CSV
 
     // Format for csv export from stock control
+    $platforms = ['Amazon', 'Ebay', 'Website', 'Onbuy'];
     $tmp = [];
     foreach ($skuPlatformSales as $sku => $stats) {
+        $tmp[$sku]['Sku'] = $sku;
+        // Append the totals for each of the platforms for each of the months
+        foreach ($platforms as $index => $platform) {
+            foreach ($monthArr as $index => $period) {
+                $month = date('Ym', strtotime($period['start']));
+                $yearMonth = date('Y-M', strtotime($period['start']));
 
-        $tmp[] = [
-            'Sku' => $sku,
-            'Amazon Week 1' => isset($stats['amazon']['week1']) ? $stats['amazon']['week1'] : 0,
-            'Amazon Week 2' => isset($stats['amazon']['week2']) ? $stats['amazon']['week2'] : 0,
-            'Amazon Week 3' => isset($stats['amazon']['week3']) ? $stats['amazon']['week3'] : 0,
-            'Amazon Week 4' => isset($stats['amazon']['week4']) ? $stats['amazon']['week4'] : 0,
-            'Ebay Week 1' => isset($stats['ebay']['week1']) ? $stats['ebay']['week1'] : 0,
-            'Ebay Week 2' => isset($stats['ebay']['week2']) ? $stats['ebay']['week2'] : 0,
-            'Ebay Week 3' => isset($stats['ebay']['week3']) ? $stats['ebay']['week3'] : 0,
-            'Ebay Week 4' => isset($stats['ebay']['week4']) ? $stats['ebay']['week4'] : 0,
-            'Website Week 1' => isset($stats['website']['week1']) ? $stats['website']['week1'] : 0,
-            'Website Week 2' => isset($stats['website']['week2']) ? $stats['website']['week2'] : 0,
-            'Website Week 3' => isset($stats['website']['week3']) ? $stats['website']['week3'] : 0,
-            'Website Week 4' => isset($stats['website']['week4']) ? $stats['website']['week4'] : 0,
-            'Onbuy Week 1' => isset($stats['onbuy']['week1']) ? $stats['onbuy']['week1'] : 0,
-            'Onbuy Week 2' => isset($stats['onbuy']['week2']) ? $stats['onbuy']['week2'] : 0,
-            'Onbuy Week 3' => isset($stats['onbuy']['week3']) ? $stats['onbuy']['week3'] : 0,
-            'Onbuy Week 4' => isset($stats['onbuy']['week4']) ? $stats['onbuy']['week4'] : 0,
-            'Total Week 1' => isset($stats),
-        ];
+             $tmp[$sku][$platform . ' ' . $yearMonth] = isset($stats[$platform][$month]) ? number_format($stats[$platform][$month], 2, '.', '') : null;
+            }
+        }
+
+        // Append total sales for the year
+        $tmp[$sku]['Year Total'] = $stats['Year Total'];
+
+        // Append the totals for each month across the platforms
+        foreach ($monthArr as $index => $period) {
+            $month = date('Ym', strtotime($period['start']));
+            $tmp[$sku]['Total ' . $month] = isset($stats[$month]) ? number_format($stats[$month], 2, '.', '') : null;
+        }
+
+        // Append the percentage change across the months
+        foreach ($monthArr as $index => $period) {
+            $month = date('Ym', strtotime($period['start']));
+            // This is the most current month we have data for
+            $lastMonthPeriod = date('Ym', strtotime(end($monthArr)['start']));
+
+            // If not the end of the year period
+            if ($month !== $lastMonthPeriod) {
+                $nextMonth = date('Ym', strtotime($period['start'] . '+ 1 month'));
+                $tmp[$sku]['PC '. $month . ' - ' . $nextMonth] = isset($stats['PC ' . $month . ' - ' . $nextMonth]) ? number_format($stats['PC ' . $month . ' - ' . $nextMonth], 2, '.', '') : null;
+            }
+        }
     }
     $skuPlatformSales = $tmp;
+
+    // Get the skus that have not sold in the 4 week period
+    $soldSkus = array_column($skuPlatformSales, 'Sku');
+    $noSaleSkus = array_keys($keySkus);
+
+    $noSaleSkus = array_diff($noSaleSkus, $soldSkus);
+
+    // First key
+    $firstKey = array_keys($skuPlatformSales)[0];
+
+    // Section with the no sale skus
+    $skuPlatformSales['nullIndex1'] = array_combine(array_keys($skuPlatformSales[$firstKey]), array_fill(0, count(array_keys($skuPlatformSales[$firstKey])), null));
+    $skuPlatformSales['seperator'] = array_combine(array_keys($skuPlatformSales[$firstKey]), array_fill(0, count(array_keys($skuPlatformSales[$firstKey])), 'NO SALE SKUS'));
+    $skuPlatformSales['nullIndex2'] = array_combine(array_keys($skuPlatformSales[$firstKey]), array_fill(0, count(array_keys($skuPlatformSales[$firstKey])), null));
+
+    foreach ($noSaleSkus as $index => $sku) {
+        $emptyRecord = array_combine(array_keys($skuPlatformSales[$firstKey]), array_fill(0, count(array_keys($skuPlatformSales[$firstKey])), null));
+        $emptyRecord['Sku'] = $sku;
+        $skuPlatformSales[$sku] = $emptyRecord;
+    }
 
     echo json_encode($skuPlatformSales, JSON_PRETTY_PRINT);
 }
