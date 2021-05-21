@@ -1319,8 +1319,12 @@ if (isset($_GET['skuStats?key'])) {
             $skuPlatformSales[$sku][$month] = array_sum(array_column($platforms, $month));
         }
 
-        // Total the sales for all the months across the platforms
+        // Total the sales for all the months across the platforms and totals for each of the platfroms for the year
         $skuPlatformSales[$sku]['Year Total'] = array_sum($skuPlatformSales[$sku]);
+        $skuPlatformSales[$sku]['Amazon Total'] = isset($skuPlatformSales[$sku]['Amazon']) ? array_sum($skuPlatformSales[$sku]['Amazon']) : null;
+        $skuPlatformSales[$sku]['Ebay Total'] = isset($skuPlatformSales[$sku]['Ebay']) ? array_sum($skuPlatformSales[$sku]['Ebay']) : null;
+        $skuPlatformSales[$sku]['Website Total'] = isset($skuPlatformSales[$sku]['Website']) ? array_sum($skuPlatformSales[$sku]['Website']) : null;
+        $skuPlatformSales[$sku]['Onbuy Total'] = isset($skuPlatformSales[$sku]['Onbuy']) ? array_sum($skuPlatformSales[$sku]['Onbuy']) : null;
 
         // Percentage change between the months
         foreach ($monthArr as $index => $period) {
@@ -1364,6 +1368,10 @@ if (isset($_GET['skuStats?key'])) {
 
         // Append total sales for the year
         $tmp[$sku]['Year Total'] = $stats['Year Total'];
+        $tmp[$sku]['Amazon Total'] = $stats['Amazon Total'];
+        $tmp[$sku]['Ebay Total'] = $stats['Ebay Total'];
+        $tmp[$sku]['Website Total'] = $stats['Website Total'];
+        $tmp[$sku]['Onbuy Total'] = $stats['Onbuy Total'];
 
         // Append the totals for each month across the platforms
         foreach ($monthArr as $index => $period) {
