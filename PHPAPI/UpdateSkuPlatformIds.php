@@ -1,5 +1,5 @@
 <?php
-
+ini_set('memory_limit', '1024M');
 /**
  * @author: Ryan Denby
  * @date: 24/05/2021
@@ -7,17 +7,24 @@
  **/
 
 // Define class dependencies
-require_once '/mnt/deepthought/FESP-REFACTOR/FespMVC/NEW_API_SYSTEM/amazon_mws/MWSRequest.php';
-require_once '/mnt/deepthought/FESP-REFACTOR/FespMVC/Controller/EbayRequest.php';
+$amPath = 'C:\inetpub\wwwroot\FESP-REFACTOR\FespMVC\NEW_API_SYSTEM\amazon_mws\MWSRequest.php';
+$ebPath = 'C:\inetpub\wwwroot\FESP-REFACTOR\FespMVC\Controller\EbayRequest.php';
+
+require_once "$amPath";
+require_once "$ebPath";
+
+// Typical namespacing shit, means you have to put use when using require_once for any class that uses namespaces
+use FespMVC\Controller\EbayRequest;
 
 $MWSR = new MWSRequest(6, 1, 60);
 $ER = new EbayRequest();
 
 // Keep this for week or so, just in case data gets manged
-copy('stock_control.db3', 'copyOfDb/stock_control.db3');
+copy('C:\xampp\htdocs\stocksystem\PHPAPI\stock_control.db3', 'C:\xampp\htdocs\stocksystem\PHPAPI\copyOfDb\stock_control.db3');
 
 // Define database connections
-$db = new PDO('sqlite:stock_control.db3');
+$scPath  = 'C:\xampp\htdocs\stocksystem\PHPAPI\stock_control.db3';
+$db = new PDO('sqlite:' . $scPath);
 
 // Define arrays
 $changedPlatformIds = [];
