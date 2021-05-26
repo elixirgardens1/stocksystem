@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die;
 }
 
-// $_GET['skuStats?key'] = 'acc';
+// $_GET['mergedAsins'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -913,7 +913,7 @@ if (isset($_GET['outOfStockDeliveries'])) {
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 if (isset($_GET['protectedAsins'])) {
-    $matrixDb = new PDO('sqlite:matrixCodes.db3');
+    $matrixDb = new PDO('sqlite:/opt/lampp/htdocs/Projects/Transpara/matrixCodes.db3');
 
     $sql = "SELECT protected_asins.asin, protected_asins.active,
              count(amazon_qrcodes.asin) as asinCount
@@ -1160,29 +1160,16 @@ if (isset($_GET['stockPredictions'])) {
                     $percentageDecreaseWeek2 = number_format((($currentSalesWeek2 - $predictedSalesWeek2) / $predictedSalesWeek2) * 100, 2);
                 }
 
-                // If decrease between current and predicted is greater than 10%
-                if ($percentageDecreaseWeek1 > 10 && $percentageDecreaseWeek2 > 10) {
-                    $trendingBelow[$key] = $productInfo[$key];
+                $trendingBelow[$key] = $productInfo[$key];
 
-                    // Change this to be more user friendly value
-                    if ($trendingBelow[$key]['Out Of Stock'] == 1) {
-                        $trendingBelow[$key]['Out Of Stock'] = true;
-                    }
-
-                    $trendingBelow[$key]['Week2 Decrease (%)'] = isset($percentageDecreaseWeek2) ? $percentageDecreaseWeek2 : 0;
-                    $trendingBelow[$key]['Week1 Decrease (%)'] = isset($percentageDecreaseWeek1) ? $percentageDecreaseWeek1 : 0;
-                    $trendingBelow[$key]['Actions'] = null;
-                } else {
-                    $trendingBelow[$key] = $productInfo[$key];
-
-                    if ($trendingBelow[$key]['Out Of Stock'] == 1) {
-                        $trendingBelow[$key]['Out Of Stock'] = true;
-                    }
-
-                    $trendingBelow[$key]['Week2 Decrease (%)'] = 0;
-                    $trendingBelow[$key]['Week1 Decrease (%)'] = 0;
-                    $trendingBelow[$key]['Actions'] = null;
+                // Change this to be more user friendly value
+                if ($trendingBelow[$key]['Out Of Stock'] == 1) {
+                    $trendingBelow[$key]['Out Of Stock'] = true;
                 }
+
+                $trendingBelow[$key]['Week2 Change (%)'] = isset($percentageDecreaseWeek2) ? $percentageDecreaseWeek2 : 0;
+                $trendingBelow[$key]['Week1 Change (%)'] = isset($percentageDecreaseWeek1) ? $percentageDecreaseWeek1 : 0;
+                $trendingBelow[$key]['Actions'] = null;
             }
         }
     }
@@ -1275,10 +1262,9 @@ if (isset($_GET['skuStats?key'])) {
     $tmp = [];
     foreach ($monthArr as $index => $month) {
         $tmp[] = [
-          'start' => date('Ymd', strtotime('first day of ' . $month)),
-          'end' => date('Ymd', strtotime('last day of ' . $month)),
+            'start' => date('Ymd', strtotime('first day of ' . $month)),
+            'end' => date('Ymd', strtotime('last day of ' . $month)),
         ];
-
     }
     $monthArr = $tmp;
 
@@ -1343,7 +1329,7 @@ if (isset($_GET['skuStats?key'])) {
                     isset($skuPlatformSales[$sku][$nextMonth]) &&
                     $skuPlatformSales[$sku][$nextMonth] !== 0
                 ) {
-                    $skuPlatformSales[$sku]['PC '. $month . ' - ' . $nextMonth] = number_format((($skuPlatformSales[$sku][$nextMonth] - $skuPlatformSales[$sku][$month]) / $skuPlatformSales[$sku][$month]) * 100, 2, '.', '');
+                    $skuPlatformSales[$sku]['PC ' . $month . ' - ' . $nextMonth] = number_format((($skuPlatformSales[$sku][$nextMonth] - $skuPlatformSales[$sku][$month]) / $skuPlatformSales[$sku][$month]) * 100, 2, '.', '');
                 } else {
                     $skuPlatformSales[$sku]['PC ' . $month . ' - ' . $nextMonth] = null;
                 }
@@ -1351,27 +1337,41 @@ if (isset($_GET['skuStats?key'])) {
         }
     }
 
+    // Get the platform id for each of the skus
+    $sql = "SELECT sku, am_id, eb_id, we_id FROM sku_am_eb";
+    $skuPlatformIds = $db->query($sql);
+    $skuPlatformIds = $skuPlatformIds->fetchAll(PDO::FETCH_ASSOC);
+
+    $tmp = [];
+    foreach ($skuPlatformIds as $index => $sku) {
+        if (isset($keySkus[$sku['sku']])) {
+            $tmp[$sku['sku']] = $sku;
+        }
+    }
+    $skuPlatformIds = $tmp;
+
     // Format for csv export from stock control
     $platforms = ['Amazon', 'Ebay', 'Website', 'Onbuy'];
     $tmp = [];
     foreach ($skuPlatformSales as $sku => $stats) {
         $tmp[$sku]['Sku'] = $sku;
+        $tmp[$sku]['AmazonID'] = isset($skuPlatformIds[$sku]['am_id']) ? $skuPlatformIds[$sku]['am_id'] : null;
+        $tmp[$sku]['EbayID'] = isset($skuPlatformIds[$sku]['eb_id']) ? $skuPlatformIds[$sku]['eb_id'] : null;
+        $tmp[$sku]['WebsiteID'] = isset($skuPlatformIds[$sku]['we_id']) ? $skuPlatformIds[$sku]['we_id'] : null;
+
         // Append the totals for each of the platforms for each of the months
         foreach ($platforms as $index => $platform) {
             foreach ($monthArr as $index => $period) {
                 $month = date('Ym', strtotime($period['start']));
                 $yearMonth = date('Y-M', strtotime($period['start']));
 
-             $tmp[$sku][$platform . ' ' . $yearMonth] = isset($stats[$platform][$month]) ? number_format($stats[$platform][$month], 2, '.', '') : null;
+                $tmp[$sku][$platform . ' ' . $yearMonth] = isset($stats[$platform][$month]) ? number_format($stats[$platform][$month], 2, '.', '') : null;
             }
+            $tmp[$sku][$platform . ' Total'] = $stats[$platform . ' Total'];
         }
 
         // Append total sales for the year
         $tmp[$sku]['Year Total'] = $stats['Year Total'];
-        $tmp[$sku]['Amazon Total'] = $stats['Amazon Total'];
-        $tmp[$sku]['Ebay Total'] = $stats['Ebay Total'];
-        $tmp[$sku]['Website Total'] = $stats['Website Total'];
-        $tmp[$sku]['Onbuy Total'] = $stats['Onbuy Total'];
 
         // Append the totals for each month across the platforms
         foreach ($monthArr as $index => $period) {
@@ -1388,7 +1388,7 @@ if (isset($_GET['skuStats?key'])) {
             // If not the end of the year period
             if ($month !== $lastMonthPeriod) {
                 $nextMonth = date('Ym', strtotime($period['start'] . '+ 1 month'));
-                $tmp[$sku]['PC '. $month . ' - ' . $nextMonth] = isset($stats['PC ' . $month . ' - ' . $nextMonth]) ? number_format($stats['PC ' . $month . ' - ' . $nextMonth], 2, '.', '') : null;
+                $tmp[$sku]['PC ' . $month . ' - ' . $nextMonth] = isset($stats['PC ' . $month . ' - ' . $nextMonth]) ? number_format($stats['PC ' . $month . ' - ' . $nextMonth], 2, '.', '') : null;
             }
         }
     }
@@ -1415,6 +1415,45 @@ if (isset($_GET['skuStats?key'])) {
     }
 
     echo json_encode($skuPlatformSales, JSON_PRETTY_PRINT);
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Get information for the stock admin page
+ */
+if (isset($_GET['stockAdmin'])) {
+    // Get the last 25 stock alerts, order them by date desc
+    $sql = "SELECT * FROM stock_admin ORDER BY date DESC LIMIT 25";
+    $adminMessages = $db->query($sql);
+    $adminMessages = $adminMessages->fetchAll(PDO::FETCH_ASSOC);
+
+    $tmp = [];
+    foreach ($adminMessages as $index => $message) {
+        $message['date'] = date('Y-m-d (H:i)', $message['date']);
+        $tmp[] = $message;
+    }
+    $adminMessages = $tmp;
+
+    echo json_encode($adminMessages, JSON_PRETTY_PRINT);
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+if (isset($_GET['mergedAsins'])) {
+    $sql = "SELECT * FROM merged_asins";
+    $mergedAsins = $db->query($sql);
+    $mergedAsins = $mergedAsins->fetchAll(PDO::FETCH_ASSOC);
+
+    $tmp = [];
+    foreach ($mergedAsins as $index => $rec) {
+        $rec['date'] = date("Y-m-d", $rec['date']);
+
+        $tmp[] = $rec;
+    }
+    $mergedAsins = $tmp;
+
+    echo json_encode($mergedAsins, JSON_PRETTY_PRINT);
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
