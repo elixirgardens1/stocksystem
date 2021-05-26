@@ -7,8 +7,8 @@ ini_set('memory_limit', '1024M');
  **/
 
 // Define class dependencies
-$amPath = 'C:\inetpub\wwwroot\FESP-REFACTOR\FespMVC\NEW_API_SYSTEM\amazon_mws\MWSRequest.php';
-$ebPath = 'C:\inetpub\wwwroot\FESP-REFACTOR\FespMVC\Controller\EbayRequest.php';
+$amPath = '/mnt/deepthought/FESP-REFACTOR/FespMVC/NEW_API_SYSTEM/amazon_mws/MWSRequest.php';
+$ebPath = '/mnt/deepthought/FESP-REFACTOR/FespMVC/Controller/EbayRequest.php';
 
 require_once "$amPath";
 require_once "$ebPath";
@@ -18,6 +18,12 @@ use FespMVC\Controller\EbayRequest;
 
 $MWSR = new MWSRequest(6, 1, 60);
 $ER = new EbayRequest();
+
+//DEBUG 
+echo '<pre style="background:#002; color:#fff;">';
+print_r($ER);
+echo '</pre>';
+die();
 
 // Keep this for week or so, just in case data gets manged
 copy('C:\xampp\htdocs\stocksystem\PHPAPI\stock_control.db3', 'C:\xampp\htdocs\stocksystem\PHPAPI\copyOfDb\stock_control.db3');
@@ -62,11 +68,12 @@ $requestReportId = $requestAm['RequestReportResult']['ReportRequestInfo']['Repor
 sleep(120);
 
 // Function to fire status check for the report we requested above
-function checkReportStatus($reportId, $MWSR) {
+function checkReportStatus($reportId, $MWSR)
+{
     $parameters = [
-      'ReportRequestIdList.Id.1' => $reportId,
-      'ReportTypeList.Type.1' => '_GET_FLAT_FILE_OPEN_LISTINGS_DATA_',
-      'ReportProcessingStatusList.Status.1' => '_DONE_',
+        'ReportRequestIdList.Id.1' => $reportId,
+        'ReportTypeList.Type.1' => '_GET_FLAT_FILE_OPEN_LISTINGS_DATA_',
+        'ReportProcessingStatusList.Status.1' => '_DONE_',
     ];
 
     $requestAm = $MWSR->request('GetReportRequestList', $parameters, 'Reports');
@@ -157,11 +164,11 @@ $ebayIds = $ER->request(
     'GetMyeBaySelling',
     [
         'ActiveList' => [
-          'Include' => true,
-          'Pagination' => [
-            'EntriesPerPage' => 200,
-            'PageNumber' => 1,
-          ],
+            'Include' => true,
+            'Pagination' => [
+                'EntriesPerPage' => 200,
+                'PageNumber' => 1,
+            ],
         ],
         'DetailLevel' => 'ReturnSummary',
     ]
@@ -274,7 +281,7 @@ $missingNewSkuAtts = array_diff(array_keys($newPlatformIds), $skuAtts);
 $missingSkuAtts = $missingSkuAtts + $missingNewSkuAtts;
 
 // Update existing skus with the updated platformlinks
-$stmt = $db->prepare("UPDATE sku_am_eb SET am_id = ? AND eb_id = ? WHERE sku = ?");
+$stmt = $db->prepare("UPDATE sku_am_eb SET am_id = ? , eb_id = ? WHERE sku = ?");
 $stmtAm = $db->prepare("INSERT OR REPLACE INTO merged_asins VALUES (?,?,?,?)");
 $db->beginTransaction();
 foreach ($changedPlatformIds as $sku => $platforms) {
