@@ -326,5 +326,6 @@ if (count($missingSkuAtts) > 0) {
         // Insert each of the missing skus into the sku_atts_new table
         $stmt->execute([$sku, null, null, time()]);
     }
+
+    $db->commit();
 }
-$db->commit();
