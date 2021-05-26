@@ -1,7 +1,7 @@
 <?php
 // Define database
 $db = new PDO('sqlite:stock_control.db3');
-$path = 'Z:\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3';
+$path = '/opt/lampp/htdocs/Projects/Transpara/TransparencyCodes.php';
 $matrixDB = new PDO('sqlite:' . $path);
 
 header('Access-Control-Allow-Origin: *');
@@ -13,11 +13,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     header('HTTP/1.1 204 No Content');
     die;
 }
-
-$requestBody['hideProduct'] = [
-    'productKey' => 'fer32',
-    'toBeHidden' => 'y',
-];
 
 $requestBody = file_get_contents('php://input');
 $requestBody = json_decode($requestBody, true);
@@ -633,6 +628,72 @@ if (isset($_FILES['responseCSV'])) {
         // Update tables with the new shelf values
         $stmt->execute([$shelfArr, (int)$product['order number'], $product['key']]);
         unset($shelfArr);
+    }
+    $db->commit();
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+if (isset($_FILES['insertSkuAtts'])) {
+    $csv = file_get_contents($_FILES['insertSkuAtts']['tmp_name']);
+    // Format submitted csv into array format
+    $arr = array_map("str_getcsv", explode("\n", $csv));
+    $headers = $arr[0];
+    unset($arr[0]);
+
+    $tmp = [];
+    foreach ($arr as $index => $rec) {
+        if (count($rec) == 3) {
+            $tmp[] = array_combine($headers, $rec);
+        }
+    }
+    $arr = $tmp;
+
+    // Get a list of valid keys that can build up a sku
+    $sql = "SELECT key, _rowid_ FROM products";
+    $scKeys = $db->query($sql);
+    $scKeys = $scKeys->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    // Insert records that have the require fields and meet the formation requirements for the atts column
+    $stmt = $db->prepare("INSERT INTO sku_atts VALUES (?,?)");
+    $stmt2 = $db->prepare("DELETE FROM sku_atts_new WHERE sku = ?");
+    $stmt3 = $db->prepare("INSERT INTO sku_room_lookup VALUES (?,?)");
+    $db->beginTransaction();
+
+    $validInserts = [];
+    foreach ($arr as $index => $sku) {
+
+        // Only process if both of these values are set 
+        if ($sku['sku'] && $sku['atts'] && $sku['room']) {
+            $validRecord = TRUE;
+
+            // Test that the atts field meets the required format
+            // Explode string into array
+            $attsArr = explode(',', $sku['atts']);
+
+            //Check each entry contains a key and a value
+            foreach ($attsArr as $index => $value) {
+                $key = strtok($value, '|');
+                $value = strtok('|');
+
+                // If the key is not set in the products table or the value associated with the key is not set, skip this sku
+                if (!isset($scKeys[$key]) || !$value) {
+                    $validRecord = FALSE;
+                }
+            }
+
+            // If this value is set to false the the atts field didnt meet the required format
+            if ($validRecord === FALSE) {
+                continue;
+            }
+
+            // Insert it into the database if the validRecord is TRUE
+            $stmt->execute([$sku['sku'], $sku['atts']]);
+            // Delete it from the sku_atts_new table as it no longer needs to be dealt with
+            $stmt2->execute([$sku['sku']]);
+            // Insert the root into the sku_room_lookup table
+            $stmt3->execute([$sku['sku'], $sku['room']]);
+        }
     }
     $db->commit();
 }
