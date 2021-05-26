@@ -109,6 +109,7 @@ if (!isset($generatedReportId)) {
     $db->beginTransaction();
     $stmt->execute(['PlatformID-SCRIPT', 'Script timed out while wating for amazon response, will run next hour', 'Low', time()]);
     $db->commit();
+    die();
 }
 
 // Else if the variable is set, then the report is ready to be requested
