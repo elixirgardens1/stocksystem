@@ -13,23 +13,17 @@ $ebPath = '/mnt/deepthought/FESP-REFACTOR/FespMVC/Controller/EbayRequest.php';
 require_once "$amPath";
 require_once "$ebPath";
 
-// Typical namespacing shit, means you have to put use when using require_once for any class that uses namespaces
 use FespMVC\Controller\EbayRequest;
 
 $MWSR = new MWSRequest(6, 1, 60);
 $ER = new EbayRequest();
 
-//DEBUG 
-echo '<pre style="background:#002; color:#fff;">';
-print_r($ER);
-echo '</pre>';
-die();
-
 // Keep this for week or so, just in case data gets manged
-copy('C:\xampp\htdocs\stocksystem\PHPAPI\stock_control.db3', 'C:\xampp\htdocs\stocksystem\PHPAPI\copyOfDb\stock_control.db3');
+// copy('C:\xampp\htdocs\stocksystem\PHPAPI\stock_control.db3', 'C:\xampp\htdocs\stocksystem\PHPAPI\copyOfDb\stock_control.db3');
 
 // Define database connections
-$scPath  = 'C:\xampp\htdocs\stocksystem\PHPAPI\stock_control.db3';
+// $scPath  = 'C:\xampp\htdocs\stocksystem\PHPAPI\stock_control.db3';
+$scPath = 'stock_control.db3';
 $db = new PDO('sqlite:' . $scPath);
 
 // Define arrays
@@ -107,7 +101,7 @@ for ($i = 0; $i < 5; $i++) {
 if (!isset($generatedReportId)) {
     $stmt = $db->prepare("INSERT INTO stock_admin VALUES (?,?,?,?)");
     $db->beginTransaction();
-    $stmt->execute(['PlatformID-SCRIPT', 'Script timed out while wating for amazon response, will run next hour', 'Low', time()]);
+    $stmt->execute(['PlatformID-SCRIPT', 'Script timed out while wating for amazon response, will run next hour', 'LOW', time()]);
     $db->commit();
     die();
 }
@@ -264,6 +258,54 @@ foreach ($ebayIds as $sku => $itemId) {
     }
 }
 
+// Get the website platformids
+$postdata = http_build_query(['pass_access' => 'G@rd3NS_8%^!']);
+
+// No direct access to the mysql database so have to use a file located
+// on the server to pull them
+$opts = [
+    'http' => [
+
+        'method'  => 'POST',
+
+        'header'  => 'Content-Type: application/x-www-form-urlencoded',
+
+        'content' => $postdata
+
+    ]
+];
+
+$post  = stream_context_create($opts);
+
+$websiteIds = file_get_contents('https://elixirgardensupplies.co.uk/websiteSkuPlatforms.php', false, $post);
+$websiteIds = json_decode($websiteIds, TRUE);
+
+// Get the links relating the product_id
+$idPostNames = array_column($websiteIds, 'post_name', 'product_id');
+
+// If the post_parent is greater than 0 then use the post parent as a product id to ge the related post_name
+$tmp = [];
+foreach ($websiteIds as $sku) {
+    if ($sku['post_parent'] > 0) {
+        $tmp[$sku['sku']] = $idPostNames[$sku['post_parent']];
+    }
+}
+$websiteIds = $tmp;
+
+$currentWeIds = array_column($platIds, 'we_id', 'sku');
+
+foreach ($websiteIds as $sku => $itemId) {
+
+    // Same as Amazon, add skus that have changed for this platform
+    if (isset($currentWeIds[$sku]) && $currentWeIds[$sku] != $itemId && $itemId) {
+        $changedPlatformIds[$sku]['we_id'] = $itemId;
+    }
+
+    // Same as Amazon, add new skus for this platform
+    if (!isset($currentWeIds[$sku])) {
+        $newPlatformIds[$sku]['we_id'] = $itemId;
+    }
+}
 
 // PROCESS THE PLATFORM IDS INTO THE STOCK CONTROL
 //
@@ -282,16 +324,17 @@ $missingNewSkuAtts = array_diff(array_keys($newPlatformIds), $skuAtts);
 $missingSkuAtts = $missingSkuAtts + $missingNewSkuAtts;
 
 // Update existing skus with the updated platformlinks
-$stmt = $db->prepare("UPDATE sku_am_eb SET am_id = ? , eb_id = ? WHERE sku = ?");
+$stmt = $db->prepare("UPDATE sku_am_eb SET am_id = ? , eb_id = ?, we_id = ? WHERE sku = ?");
 $stmtAm = $db->prepare("INSERT OR REPLACE INTO merged_asins VALUES (?,?,?,?)");
 $db->beginTransaction();
 foreach ($changedPlatformIds as $sku => $platforms) {
     // Should always have a value, so if a the position is set updat the database
     $amId = isset($platforms['am_id']) ? $platforms['am_id'] : $platIds[$sku]['am_id'];
     $ebId = isset($platforms['eb_id']) ? $platforms['eb_id'] : $platIds[$sku]['eb_id'];
+    $weId = isset($platIds['we_id']) ? $platforms['we_id'] : $platIds[$sku['we_id']];
 
     // Update the table
-    $stmt->execute([$amId, $ebId, $sku]);
+    $stmt->execute([$amId, $ebId, $weId, $sku]);
 
     // Insert into merged if the amazon id is changed for this sku
     if (isset($platforms['am_id'])) {
@@ -308,9 +351,10 @@ $db->beginTransaction();
 foreach ($newPlatformIds as $sku => $platforms) {
     $amId = isset($platforms['am_id']) ? $platforms['am_id'] : null;
     $ebId = isset($platforms['eb_id']) ? $platforms['eb_id'] : null;
+    $weId = isset($platforms['we_id']) ? $platforms['we_id'] : null;
 
     // Insert values if they are set
-    $stmt->execute([$sku, $amId, $ebId, null, null]);
+    $stmt->execute([$sku, $amId, $ebId, $weId, null]);
 }
 $db->commit();
 
