@@ -52,7 +52,7 @@
           />
         </div>
 
-        <label id="costLabel" for="modalCost">Cost</label>
+        <label id="costLabel" for="modalCost">Cost [ Last Edit: {{ this.product.previousCostDate }} | Previous Cost: {{ this.product.previousCost }} ]</label>
         <div id="modalCostDiv">
           <input
             id="modalCost"
@@ -224,7 +224,7 @@ module.exports = {
         );
       },
     },
-  },
+  },  
   methods: {
     modalSubmit() {
       // Using refs to the elements get the values and assign them to the array that will be passed back to parent

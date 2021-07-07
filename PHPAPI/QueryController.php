@@ -8,6 +8,13 @@ ini_set('memory_limit', '1024M');
  * @author: Ryan Denby
  */
 
+require_once 'C:/inetpub/wwwroot/database_paths.php';
+
+// Define database
+$db = new PDO('sqlite:' . $stock_control_db_path);
+$matrixDb = new PDO('sqlite:' . $matrixCodes_db_path);
+$dbPB = new PDO('sqlite:' . $pbi_db_path);
+
 header('access-control-allow-origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
 header('Access-Control-Allow-Headers: X-Requested-With,Origin,Content-Type,Cookie,Accept');
@@ -17,13 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     die;
 }
 
-// $_GET['mergedAsins'] = 'acc';
+// $_GET['skuStats?key'] = 'acc';
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// Define connection to stock control database
-$db = new PDO('sqlite:stock_control.db3');
-$dbPB = new PDO('sqlite:main.db3');
 
 // Define units lookup
 $unitLookup = [
@@ -53,10 +56,12 @@ if (isset($_GET['viewProducts'])) {
     //Join products table to product_rooms and stock, via product key
     $sql = "SELECT products.*,
             stock.qty, stock.pkg_qty, stock.pkg_multiples, stock.days_amb, stock.days_red,
-            product_rooms.room,product_rooms.shelf_location
+            product_rooms.room,product_rooms.shelf_location,
+            product_cost_edits.changeDate, product_cost_edits.previousCost
             FROM products
             LEFT JOIN stock ON (products.key = stock.key)
-            LEFT JOIN product_rooms ON (products.key = product_rooms.key)";
+            LEFT JOIN product_rooms ON (products.key = product_rooms.key)
+            LEFT JOIN product_cost_edits ON (products.key = product_cost_edits.key)";
     $productsArr = $db->query($sql);
     $productsArr = $productsArr->fetchAll(PDO::FETCH_ASSOC);
 
@@ -152,6 +157,8 @@ if (isset($_GET['viewProducts'])) {
             $redThreshold = (int)$product['redThreshold'];
         }
 
+        $previosCostDate = $product['changeDate'] ? date('d-m-y', $product['changeDate']) : 'N/A';
+
         $tmp[$key] = [
             'Cat' => $product['cat'],
             'Key' => $product['key'],
@@ -172,6 +179,8 @@ if (isset($_GET['viewProducts'])) {
             'outOfStock' => $product['outOfStock'],
             'yellowThreshold' => $yellowThreshold,
             'redThreshold' => $redThreshold,
+            'previousCost' => $product['previousCost'],
+            'previousCostDate' => $previosCostDate,
         ];
     }
     $productsArr = $tmp;
@@ -913,8 +922,6 @@ if (isset($_GET['outOfStockDeliveries'])) {
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 if (isset($_GET['protectedAsins'])) {
-    $matrixDb = new PDO('sqlite:/opt/lampp/htdocs/Projects/Transpara/matrixCodes.db3');
-
     $sql = "SELECT protected_asins.asin, protected_asins.active,
              count(amazon_qrcodes.asin) as asinCount
              FROM protected_asins
@@ -1170,6 +1177,7 @@ if (isset($_GET['stockPredictions'])) {
                 $trendingBelow[$key]['Week2 Change (%)'] = isset($percentageDecreaseWeek2) ? $percentageDecreaseWeek2 : 0;
                 $trendingBelow[$key]['Week1 Change (%)'] = isset($percentageDecreaseWeek1) ? $percentageDecreaseWeek1 : 0;
                 $trendingBelow[$key]['Actions'] = null;
+
             }
         }
     }
@@ -1262,9 +1270,10 @@ if (isset($_GET['skuStats?key'])) {
     $tmp = [];
     foreach ($monthArr as $index => $month) {
         $tmp[] = [
-            'start' => date('Ymd', strtotime('first day of ' . $month)),
-            'end' => date('Ymd', strtotime('last day of ' . $month)),
+          'start' => date('Ymd', strtotime('first day of ' . $month)),
+          'end' => date('Ymd', strtotime('last day of ' . $month)),
         ];
+
     }
     $monthArr = $tmp;
 
@@ -1329,7 +1338,7 @@ if (isset($_GET['skuStats?key'])) {
                     isset($skuPlatformSales[$sku][$nextMonth]) &&
                     $skuPlatformSales[$sku][$nextMonth] !== 0
                 ) {
-                    $skuPlatformSales[$sku]['PC ' . $month . ' - ' . $nextMonth] = number_format((($skuPlatformSales[$sku][$nextMonth] - $skuPlatformSales[$sku][$month]) / $skuPlatformSales[$sku][$month]) * 100, 2, '.', '');
+                    $skuPlatformSales[$sku]['PC '. $month . ' - ' . $nextMonth] = number_format((($skuPlatformSales[$sku][$nextMonth] - $skuPlatformSales[$sku][$month]) / $skuPlatformSales[$sku][$month]) * 100, 2, '.', '');
                 } else {
                     $skuPlatformSales[$sku]['PC ' . $month . ' - ' . $nextMonth] = null;
                 }
@@ -1365,7 +1374,7 @@ if (isset($_GET['skuStats?key'])) {
                 $month = date('Ym', strtotime($period['start']));
                 $yearMonth = date('Y-M', strtotime($period['start']));
 
-                $tmp[$sku][$platform . ' ' . $yearMonth] = isset($stats[$platform][$month]) ? number_format($stats[$platform][$month], 2, '.', '') : null;
+             $tmp[$sku][$platform . ' ' . $yearMonth] = isset($stats[$platform][$month]) ? number_format($stats[$platform][$month], 2, '.', '') : null;
             }
             $tmp[$sku][$platform . ' Total'] = $stats[$platform . ' Total'];
         }
@@ -1388,7 +1397,7 @@ if (isset($_GET['skuStats?key'])) {
             // If not the end of the year period
             if ($month !== $lastMonthPeriod) {
                 $nextMonth = date('Ym', strtotime($period['start'] . '+ 1 month'));
-                $tmp[$sku]['PC ' . $month . ' - ' . $nextMonth] = isset($stats['PC ' . $month . ' - ' . $nextMonth]) ? number_format($stats['PC ' . $month . ' - ' . $nextMonth], 2, '.', '') : null;
+                $tmp[$sku]['PC '. $month . ' - ' . $nextMonth] = isset($stats['PC ' . $month . ' - ' . $nextMonth]) ? number_format($stats['PC ' . $month . ' - ' . $nextMonth], 2, '.', '') : null;
             }
         }
     }
@@ -1454,6 +1463,26 @@ if (isset($_GET['mergedAsins'])) {
     $mergedAsins = $tmp;
 
     echo json_encode($mergedAsins, JSON_PRETTY_PRINT);
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+if (isset($_GET['missingSkuAtts'])) {
+    $sql = "SELECT sku FROM sku_atts_new";
+    $skuAttsMissing = $db->query($sql);
+    $skuAttsMissing = $skuAttsMissing->fetchAll(PDO::FETCH_COLUMN);
+
+    $tmp = [];
+    foreach ($skuAttsMissing as $index => $sku) {
+        $tmp[] = [
+            'sku' => $sku,
+            'atts' => null,
+            'room' => null,
+        ];
+    }
+    $skuAttsMissing = $tmp;
+
+    echo json_encode($skuAttsMissing, JSON_PRETTY_PRINT);
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------

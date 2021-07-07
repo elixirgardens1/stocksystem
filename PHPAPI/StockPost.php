@@ -1,8 +1,11 @@
 <?php
+require_once 'C:/inetpub/wwwroot/database_paths.php';
+
 // Define database
-$db = new PDO('sqlite:stock_control.db3');
-$path = '/opt/lampp/htdocs/Projects/Transpara/TransparencyCodes.php';
-$matrixDB = new PDO('sqlite:' . $path);
+$db = new PDO('sqlite:' . $stock_control_db_path);
+$matrixDB = new PDO('sqlite:' . $matrixCodes_db_path);
+// $db = new PDO('sqlite:stock_control.db3');
+// $matrixDB = new PDO('sqlite:C:\inetpub\wwwroot\FESP-REFACTOR\FespMVC\Modules\Transparanecy\matrixCodes.db3');
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
@@ -82,6 +85,18 @@ if (isset($requestBody['editProduct'])) {
         $responseRooms = buildQuery($tableLookup["product_rooms"], "UPDATE", "product_rooms", "WHERE key = ?");
     } else {
         $responseRooms = buildQuery($tableLookup["product_rooms"], "INSERT", "product_rooms", "");
+    }
+
+    // Check if product_cost passed is not equal to the currently stored product_cost, the previous value and the time of update
+    $sql = "SELECT product_cost FROM products WHERE key = '{$editData['Key']}'";
+    $currentCost = $db->query($sql);
+    $currentCost = $currentCost->fetchColumn();
+
+    if ($currentCost && $currentCost != $editData['product_cost']) {
+        $stmt = $db->prepare("INSERT OR REPLACE INTO product_cost_edits VALUES (?,?,?)");
+        $db->beginTransaction();
+        $stmt->execute([$editData['Key'], $currentCost, time()]);
+        $db->commit();
     }
 
     // Prepare updates for both tables
@@ -291,7 +306,7 @@ if (isset($requestBody['processPendingProduct'])) {
 
     // Execute the variables needed to update the tables
     $db->beginTransaction();
-    $stmtOrderedStock->execute(['Complete', $processProduct['Delivery Number'], $processProduct['signedBy'], date("Ymd"), $processProduct['Order Number'], $processProduct['Key']]);
+    $stmtOrderedStock->execute(['Complete', $processProduct['Delivery Number'], $processProduct['signedBy'], date('Ymd'), $processProduct['Order Number'], $processProduct['Key']]);
     $stmtStock->execute([$processProduct['Qty'], $processProduct['Key']]);
     $stmtStockChange->execute([$processProduct['Qty'], $processProduct['Key']]);
     $stmtUpdatedStock->execute([$processProduct['Key'], $processProduct['Qty'], $processProduct['Delivery Number'], date('YmdHi')]);
@@ -553,7 +568,7 @@ if (isset($_FILES['file'])) {
     // require_once 'TransparencyCodes.php';
     require_once 'C:\inetpub\wwwroot\FESP-REFACTOR\FespMVC\Modules\Transparanecy\TransparencyCodes.php';
 
-    $ATC = new TransparencyCodes($_POST);
+    $ATC = new TransparencyCodes($_POST, $_FILES);
 }
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
