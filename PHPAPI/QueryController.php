@@ -1197,6 +1197,93 @@ if (isset($_GET['stockPredictions'])) {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
+if (isset($_GET['stockPredictionsRolling'])) {
+    $sql = "SELECT products.cat as Cat, products.key as Key, products.product as Product, unit, stock.qty as Qty FROM products LEFT JOIN stock ON (products.key = stock.key)";
+    $spProducts = $db->query($sql);
+    $spProducts = $spProducts->fetchAll(PDO::FETCH_ASSOC);
+
+    $tmp = [];
+    foreach ($spProducts as $index => $product) {
+        $tmp[$product['Key']] = $product;
+        $tmp[$product['Key']]['unit'] = $unitLookup[$product['unit']];
+    }
+    $spProducts = $tmp;
+
+    // Get start of rolling 12 months (First day of current month)
+    $startOfPeriod = date("Ymd", strtotime('first day of this month last year'));
+    $endOfPeriod = date("Ymd", strtotime('last day of last month'));
+
+    $sql = "SELECT * FROM stock_change WHERE date BETWEEN $startOfPeriod AND $endOfPeriod ORDER BY date ASC";
+    $spChangeRolling = $db->query($sql);
+    $spChangeRolling = $spChangeRolling->fetchAll(PDO::FETCH_ASSOC);
+
+    // Format key => date => qty
+    $tmp = [];
+    foreach ($spChangeRolling as $index => $rec) {
+        $tmp[$rec['key']][$rec['date']] = $rec['qty'];
+    }
+    $spChangeRolling = $tmp;
+
+    // Change from qty on each day to sales on each day
+    $tmp = [];
+    foreach ($spChangeRolling as $key => $sales) {
+        foreach ($sales as $date => $qty) {
+            $lastKey = key(array_slice($sales, -1, 1, true));
+
+            if ($date != $lastKey) {
+                $nextDate = DateTime::createFromFormat('Ymd', $date + 1);
+                $nextDate = $nextDate->format('Ymd');
+                $tmp[$key][$date] = number_format($qty - $sales[$nextDate], 2, '.', '');
+            }
+        }
+    }
+    $spChangeRolling = $tmp;
+
+    $yearPredictionsRolling = [];
+    $yearQuartersRolling = [];
+    $yearTotalsRolling = [];
+    foreach ($spChangeRolling as $key => $sales) {
+        for ($i = 0; $i < 12; $i++) {
+            $startDate = date('Ymd', strtotime($startOfPeriod . ' +' . $i . 'month'));
+            $endDate = date('Ymd', strtotime($startOfPeriod . ' +' . $i + 1 . 'month'));
+
+            $startMonth = date('Y-F', strtotime($startDate . ' + 1 year'));
+            $arr = getPeriod($startDate, $endDate, $sales);
+
+            $yearPredictionsRolling[$key][$startMonth] = ceil(periodTotalSales($arr) * 1.1);
+        }
+        $j = 1;
+        for ($i = 0; $i < 12; $i += 3) {
+            $yearQuartersRolling[$key]['Q' . $j] = periodTotalSales(array_slice($yearPredictionsRolling[$key], $i, 3));
+            $j++;
+        }
+        $yearTotalsRolling[$key] = PeriodTotalSales($yearPredictionsRolling[$key]);
+    }
+
+    $spProductsRolling = [];
+    foreach ($spProducts as $key => $product) {
+        if (isset($yearPredictionsRolling[$key])) {
+            $spProductsRolling[$product['Cat']][$key] = $product;
+            $spProductsRolling[$product['Cat']][$key] += $yearPredictionsRolling[$key];
+            $spProductsRolling[$product['Cat']][$key] += $yearQuartersRolling[$key];
+            $spProductsRolling[$product['Cat']][$key]['Year Total'] = $yearTotalsRolling[$key];
+        }
+    }
+
+    // DEBUG
+    echo '<pre style="background: black; color: white;">';
+    print_r($spProductsRolling);
+    echo '</pre>';
+    die();
+
+
+
+    // Intergrate this with the main stock perdicitions
+}
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
 // Old method for generating stock predictions
 if (isset($_GET['skuPlatLinks?sku'])) {
     $sku = $_GET['skuPlatLinks?sku'];
