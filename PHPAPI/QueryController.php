@@ -996,7 +996,7 @@ if (isset($_GET['stockPredictions'])) {
         foreach ($sales as $date => $qty) {
             if ($date != $lastKey) {
                 $nextDate = date('Ymd', strtotime($date . ' + 1 day'));
-                $tmp[$key][$date] = number_format(($qty - $sales[$nextDate]), 2, '.', '');
+                $tmp[$key][$date] = round($qty - $sales[$nextDate]);
             }
         }
     }
