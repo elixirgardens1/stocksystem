@@ -359,6 +359,7 @@ if (isset($_GET["updateProducts"])) {
             LEFT JOIN updated_stock ON (products.key = updated_stock.key)
             LEFT JOIN stock ON (products.key = stock.key)
             WHERE products.to_be_hidden IS null
+            WHERE products.to_be_hidden IS NULL OR products.to_be_hidden = ''
             ORDER BY updated_stock.datetime DESC";
     $updateProducts = $db->query($sql);
     $updateProducts = $updateProducts->fetchAll(PDO::FETCH_ASSOC);
