@@ -16,6 +16,13 @@
         value="Under Performing Products"
         @click="viewType = 'viewProducts'"
       />
+      <input
+        id="exportBtn"
+        type="button"
+        class="navBtn"
+        value="Export Cat Predictions"
+        @click="exportCatPredictions"
+      />
     </div>
 
     <div v-show="viewType === 'viewPredictions'">
@@ -45,8 +52,20 @@
             v-model="filterProductInput"
           />
         </div>
+  </div>
+  <div id="tableLegendDiv">
+    <div id="tableLegend">
+      <div>
+        <span>(black): {{ new Date().getFullYear() }} (Predicted)</span>
+        <input type="number" min="0" max="100" v-model.lazy="predPercentageOffset" />
       </div>
 
+      <div>
+        <span style="color: red;">(red): {{ new Date().getFullYear() }} (Current)</span>
+        <input type="number" min="0" max="100" v-model.lazy="currPercentageOffset" />
+      </div>
+  </div>
+  </div>
       <div id="predictionsDiv">
         <h1 v-if="selectedCat === 'Select Category'">
           Select Product Category
@@ -56,6 +75,7 @@
           id="predictionTable"
           :tableColumns="predictionsColumns"
           :tableData="filterCat"
+          :tableData2="filterCatCurrent"
           @filter-column="setFilter"
         ></PredictionsTable>
       </div>
@@ -87,6 +107,7 @@ import PredictionsTable from "@/components/PredictionsTable.vue";
 import { computed, onMounted, reactive, ref } from "@vue/runtime-core";
 import { axiosGet } from "@/composables/axiosGet.js";
 import { exportCsv } from "@/composables/exportCsv.js";
+import _ from "lodash";
 
 export default {
   name: "StockPredictions",
@@ -94,29 +115,9 @@ export default {
     PredictionsTable,
   },
   setup() {
-    const predictionsColumns = [
-      "Key",
-      "Product",
-      "Qty",
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-      "Q1",
-      "Q2",
-      "Q3",
-      "Q4",
-      "Year Total",
-    ];
+    const predictionsColumns = ref([]);
     const predictionsData = reactive({ value: {} });
+    const spProductsCurrent = reactive({ value: {} });
     const productCats = ref([]);
     const selectedCat = ref("Select Category");
     const filterColumn = ref("");
@@ -127,27 +128,21 @@ export default {
     const upProducts = ref([]);
     const upProductsColumns = ref([]);
     const upProductCount = ref(0);
+    const predPercentageOffset = ref(0);
+    const currPercentageOffset = ref(0);
 
     const filterCat = computed(() => {
       if (!selectedCat.value || selectedCat.value == "Select Category") {
         return {};
       }
 
-      let filtered = Object.values(
-        predictionsData.value[selectedCat.value]
-      ).filter((row) => {
-        if (
-          row.Product.toLowerCase().indexOf(
-            filterProductInput.value.toLowerCase()
-          ) == -1
-        ) {
+      let catPredictions = percentageOffsetPredictions(predictionsData.value[selectedCat.value], predPercentageOffset.value);
+      let filtered = Object.values(catPredictions).filter((row) => {
+          if (row.Product.toLowerCase().indexOf(filterProductInput.value.toLowerCase()) == -1) {
           return false;
         }
 
-        if (
-          row.Key.toLowerCase().indexOf(filterKeyInput.value.toLowerCase()) ==
-          -1
-        ) {
+        if (row.Key.toLowerCase().indexOf(filterKeyInput.value.toLowerCase()) == -1) {
           return false;
         }
 
@@ -169,9 +164,24 @@ export default {
       return filtered;
     });
 
+    const filterCatCurrent = computed(() => {
+      return percentageOffsetPredictions(
+        spProductsCurrent.value[selectedCat.value],
+        currPercentageOffset.value);
+    });
+
+    function percentageOffsetPredictions(predictions, offset) {
+      const multiplier = (offset / 100) + 1;
+      const regex = /[a-zA-Z]/g;
+
+      return _.mapValues(predictions, (row) =>
+        _.mapValues(row, (val, key) =>
+          !regex.test(val) && val && key !== "unit" ? Math.round((val * multiplier)).toFixed(0) : val));
+    }
+
     // Set filters for predictions table, which will trigger computed properties
     const setFilter = (column, type) => {
-      filterColumn.value = column;
+        filterColumn.value = column;
       filterType.value = type;
     };
 
@@ -185,9 +195,14 @@ export default {
         return upProducts.value.sort((a, b) => a["Qty"] - b["Qty"]);
       }
     };
+    
+    function exportCatPredictions () {
+      downloadCsv(filterCat.value, `${selectedCat.value}Predicted2021`);
+      downloadCsv(filterCatCurrent.value, `${selectedCat.value}Current2021`);
+    }
 
     const skusStats = (key) => {
-        axiosGet(`skuStats?key=${key}`).then((response) => {
+      axiosGet(`skuStats?key=${key}`).then((response) => {
             downloadCsv(response, `${key}SkuStats`)
         });
     };
@@ -215,6 +230,7 @@ export default {
     onMounted(() => {
       axiosGet("stockPredictions").then((response) => {
         predictionsData.value = response.spProducts;
+        spProductsCurrent.value = response.spProductsCurrent;
         productCats.value = response.productCats;
         upProducts.value = response.trendingBelow;
 
@@ -224,12 +240,15 @@ export default {
         );
 
         upProductCount.value = Object.keys(upProducts.value).length;
+
+        predictionsColumns.value = response.spProductsColumns;
       });
     });
 
     return {
       predictionsColumns,
       predictionsData,
+      spProductsCurrent,
       productCats,
       filterKeyInput,
       filterProductInput,
@@ -238,12 +257,16 @@ export default {
       setFilter,
       selectedCat,
       filterCat,
+      filterCatCurrent,
       viewType,
       upProducts,
       upProductsColumns,
       upProductCount,
       filterUpp,
       skusStats,
+      predPercentageOffset,
+      currPercentageOffset,
+      exportCatPredictions,
     };
   },
 };
@@ -284,6 +307,23 @@ export default {
   width: 20%;
 }
 
+#tableLegendDiv {
+  position: absolute;
+  left: 25%;
+  top: 18%;
+}
+
+#tableLegend {
+  position: relative;
+  display: grid;
+  width: 300px;
+}
+
+#tableLegend input {
+  float: right;
+  width: 100px;
+}
+
 #predictionsDiv {
   position: absolute;
   top: 25%;
@@ -307,6 +347,11 @@ export default {
 
 #productsBtn {
   position: relative;
+  top: 65%;
+}
+
+#exportBtn {
+  position: relative;  
   top: 65%;
 }
 

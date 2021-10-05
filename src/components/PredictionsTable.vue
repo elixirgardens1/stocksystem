@@ -19,7 +19,17 @@
               {{ value[column] }}
             </p>
 
+            <span style="color: red;" v-if="tableData2 && tableData2[value.Key][column] !== undefined"> {{ tableData2[value.Key][column] }}</span>
+  
             <p v-if="column === 'Qty'">{{ value[column] }} {{ value.unit }}</p>
+
+            <input
+              type="button"
+              class="navBtn"
+              value="Export Sku Stats"
+              v-if="column === 'Actions'"
+              @click="$emit('export-sku-stats', value.Key)"
+            />
 
             <router-link v-if="column === 'Product'" :to="`/${value.Key}`">
               {{ value[column] }}
@@ -42,6 +52,10 @@ export default {
       type: Object,
       required: true,
     },
+    tableData2: {
+      type: Object,
+      required: false,
+    },
   },
   data() {
     return {
@@ -49,6 +63,7 @@ export default {
       filterType: "",
     };
   },
+  emits: ["filter-column", "export-sku-stats"],
   methods: {
     columnFilter: function(event) {
       // Will depend on browser
