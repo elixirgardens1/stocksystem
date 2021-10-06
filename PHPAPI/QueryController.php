@@ -408,26 +408,20 @@ if (isset($_GET['stockSkuData'])) {
     $skuProducts = $db->query($sql);
     $skuProducts = $skuProducts->fetchAll(PDO::FETCH_ASSOC);
 
-    $sql = "SELECT sku_atts.sku, sku_atts.atts,
-            sku_am_eb.am_id, sku_am_eb.eb_id, sku_am_eb.we_id, sku_am_eb.pr_id
+    $sql = "SELECT sku_atts.atts, sku_am_eb.*
             FROM sku_atts
             LEFT JOIN sku_am_eb ON (sku_atts.sku = sku_am_eb.sku)";
     $keySkuPlatids = $db->query($sql);
     $keySkuPlatids = $keySkuPlatids->fetchAll(PDO::FETCH_ASSOC);
 
     $tmp = [];
-    foreach ($keySkuPlatids as $index => $values) {
-        if (isset($values['atts'])) {
-            $formattedAtts = explode(',', $values['atts']);
+    foreach ($keySkuPlatids as $index => $sku) {
+        if (isset($sku['atts'])) {
+            $formattedAtts = explode(',', $sku['atts']);
             foreach ($formattedAtts as $index => $key) {
                 $key = strtok($key, '|');
-                $tmp[$key][$values['sku']] = [
-                    'sku' => $values['sku'],
-                    'am_id' => $values['am_id'],
-                    'eb_id' => $values['eb_id'],
-                    'we_id' => $values['we_id'],
-                    'pr_id' => $values['pr_id'],
-                ];
+                $tmp[$key][$sku['sku']]['sku'] = $sku['sku'];
+                $tmp[$key][$sku['sku']][$sku['platform']] = $sku['id'];
             }
         }
     }

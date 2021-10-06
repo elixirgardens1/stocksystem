@@ -203,10 +203,10 @@ export default {
     const showEditMode = ref(false);
 
     let platformUrls = {
-      am_id: "https://www.amazon.co.uk/dp/",
-      eb_id: "https://www.ebay.co.uk/itm/",
-      we_id: "https://elixirgardensupplies.co.uk/product/",
-      pr_id: "https://www.ebay.co.uk/itm/",
+      a: "https://www.amazon.co.uk/dp/",
+      e: "https://www.ebay.co.uk/itm/",
+      w: "https://elixirgardensupplies.co.uk/product/",
+      p: "https://www.ebay.co.uk/itm/",
     };
 
     /**
@@ -228,10 +228,10 @@ export default {
       let platIds = {};
       for (const value of Object.entries(selectedKey.value[sku])) {
         let platFormLookUp = {
-          am_id: "Amazon:",
-          eb_id: "Ebay:",
-          we_id: "Website:",
-          pr_id: "Prosalt:",
+          a: "Amazon:",
+          e: "Ebay:",
+          w: "Website:",
+          p: "Prosalt:",
         };
         if (value[0] !== "sku" && value[1])
           platIds[value[0]] = platFormLookUp[value[0]] + value[1];
@@ -285,20 +285,20 @@ export default {
           skuPlatforms.value = response;
           skuSearchTitle.value = `Platform Urls For ${skuSearchInput.value}`;
 
-          amazonSkuUrl.value = skuPlatforms.value[0].am_id
-            ? `${platformUrls["am_id"]}${skuPlatforms.value[0].am_id}`
+          amazonSkuUrl.value = skuPlatforms.value[0].a
+            ? `${platformUrls["a"]}${skuPlatforms.value[0].a}`
             : "";
 
-          ebaySkuUrl.value = skuPlatforms.value[0].eb_id
-            ? `${platformUrls["eb_id"]}${skuPlatforms.value[0].eb_id}`
+          ebaySkuUrl.value = skuPlatforms.value[0].e
+            ? `${platformUrls["e"]}${skuPlatforms.value[0].e}`
             : "";
 
-          websiteSkuUrl.value = skuPlatforms.value[0].we_id
-            ? `${platformUrls["we_id"]}${skuPlatforms.value[0].we_id}`
+          websiteSkuUrl.value = skuPlatforms.value[0].w
+            ? `${platformUrls["w"]}${skuPlatforms.value[0].w}`
             : "";
 
-          primeSkuUrl.value = skuPlatforms.value[0].pr_id
-            ? `${platformUrls["pr_id"]}${skuPlatforms.value[0].pr_id}`
+          primeSkuUrl.value = skuPlatforms.value[0].p
+            ? `${platformUrls["p"]}${skuPlatforms.value[0].p}`
             : "";
           showSearch.value = true;
         }
@@ -313,10 +313,10 @@ export default {
       let request = {};
       request["editSkuPlatforms"] = {
         sku: skuSearchInput.value,
-        amazonSkuUrl: amazonSkuUrl.value.replace(platformUrls["am_id"], ""),
-        ebaySkuUrl: ebaySkuUrl.value.replace(platformUrls["eb_id"], ""),
-        websiteSkuUrl: websiteSkuUrl.value.replace(platformUrls["we_id"], ""),
-        primeSkuUrl: primeSkuUrl.value.replace(platformUrls["pr_id"]),
+        amazonSkuUrl: amazonSkuUrl.value.replace(platformUrls["a"], ""),
+        ebaySkuUrl: ebaySkuUrl.value.replace(platformUrls["e"], ""),
+        websiteSkuUrl: websiteSkuUrl.value.replace(platformUrls["w"], ""),
+        primeSkuUrl: primeSkuUrl.value.replace(platformUrls["p"]),
       };
 
       axiosPost(request);
@@ -338,10 +338,10 @@ export default {
       let request = {};
       request["addNewPlatformSku"] = {
         sku: newPlatformSku.value,
-        newAmazonSku: newAmazonSku.value.replace(platformUrls["am_id"], ""),
-        newEbaySku: newEbaySku.value.replace(platformUrls["eb_id"], ""),
-        newWebsiteSku: newWebsiteSku.value.replace(platformUrls["we_id"], ""),
-        newPrimeSku: newPrimeSku.value.replace(platformUrls["pr_id"]),
+        newAmazonSku: newAmazonSku.value.replace(platformUrls["a"], ""),
+        newEbaySku: newEbaySku.value.replace(platformUrls["e"], ""),
+        newWebsiteSku: newWebsiteSku.value.replace(platformUrls["w"], ""),
+        newPrimeSku: newPrimeSku.value.replace(platformUrls["p"]),
       };
 
       axiosPost(request);
@@ -358,6 +358,7 @@ export default {
      */
     onMounted(() => {
       axiosGet("stockSkuData").then((response) => {
+        console.log(response);
         skuProducts.value = response.skuProducts;
         keySkuPlatIds.value = response.keySkuPlatIds;
       });
